@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set S = status.sync_state %}
+{% set labels = {
+  'in_sync': ('ok', 'In sync'),
+  'remote_changes': ('info', 'GitHub ahead — deploy pending'),
+  'local_changes': ('warn', 'Local changes to push'),
+  'conflict': ('err', 'Conflict'),
+  'blocked': ('err', 'Blocked — readiness'),
+  'empty_repo': ('warn', 'Empty repository'),
+  'not_connected': ('', 'Not connected')
+} %}
+{% block content %}
+<h1>Dashboard</h1>
+
+{% if not status.connected %}
+  <div class="card">
+    <h2>Welcome to HA-GitOps</h2>
+    <p class="muted">Connect a GitHub repository to start syncing your Home Assistant configuration.</p>
+    <a class="btn primary" href="{{ base_path }}/setup">Get started →</a>
+  </div>
+{% else %}
+  <div class="row">
+    <div class="card">
+      <h2>Status</h2>
+      <p><span class="badge {{ labels[S][0] }}">{{ labels[S][1] }}</span>
+         {% if status.busy %}<span class="badge info">{{ status.busy }}…</span>{% endif %}</p>
+      <dl class="kv">
+        <dt>Repository</dt><dd>{{ status.connection.full_name }}</dd>
+        <dt>Branch</dt><dd>{{ status.connection.branch }}</dd>
+        <dt>Config path</dt><dd>{{ status.connection.config_path or '(repo root)' }}</dd>
+        <dt>Deployed</dt><dd>{{ status.last_deployed_sha[:8] if status.last_deployed_sha else '—' }}</dd>
+        <dt>Remote head</dt><dd>{{ status.last_remote_sha[:8] if status.last_remote_sha else '—' }}</dd>
+        <dt>Local changes</dt><dd>{{ status.local_changes.modified|length + status.local_changes.added|length + status.local_changes.deleted|length }}</dd>
+        <dt>Last poll</dt><dd>{{ status.last_poll_ts or 'never' }}</dd>
+      </dl>
+      <div class="actions">
+        <button class="btn primary" data-post="/api/deploy" data-busy="Deploying…" data-ok="Deploy finished">⤓ Deploy Now</button>
+        <button class="btn" data-post="/api/readiness/refresh" data-busy="Analyzing…">↻ Refresh</button>
+        {% if status.local_changes.modified or status.local_changes.added or status.local_changes.deleted %}
+          <a class="btn" href="{{ base_path }}/changes">Review &amp; Push →</a>
+        {% endif %}
+        {% if S == 'conflict' %}<a class="btn danger" href="{{ base_path }}/conflict">Resolve conflict →</a>{% endif %}
+        {% if status.readiness and status.readiness.is_empty %}
+          <button class="btn primary" data-post="/api/initialize" data-busy="Initializing…"
+                  data-confirm="Push your current Home Assistant config to this empty repo?">🌱 Initialize repo</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Monitoring</h2>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="monitoring-toggle" {{ 'checked' if status.monitoring_enabled }}>
+        Poll GitHub every {{ status.interval_seconds }}s
+      </label>
+      <p class="muted">Auto-deploy on new commits: <strong>{{ 'on' if status.auto_deploy else 'off' }}</strong></p>
+      {% if status.readiness %}
+        <h2 style="margin-top:16px">Readiness</h2>
+        <p>Score <strong>{{ status.readiness.score }}</strong>/100 —
+          {% if status.readiness.deployable %}<span class="badge ok">deployable</span>
+          {% else %}<span class="badge err">blocked</span>{% endif %}</p>
+        <a href="{{ base_path }}/readiness">View report →</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if status.last_deployment %}
+  <div class="card">
+    <h2>Last deployment</h2>
+    {% set d = status.last_deployment %}
+    <p>
+      <span class="badge {{ 'ok' if d.status=='success' else 'err' }}">{{ d.status }}</span>
+      <span class="mono">{{ (d.sha or '')[:8] }}</span> · {{ d.direction }} · {{ d.ts }}
+    </p>
+    {% if d.message %}<p class="muted">{{ d.message }}</p>{% endif %}
+    {% if d.errors %}<ul>{% for e in d.errors %}<li class="mono">{{ e }}</li>{% endfor %}</ul>{% endif %}
+    <a href="{{ base_path }}/history">Full history →</a>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

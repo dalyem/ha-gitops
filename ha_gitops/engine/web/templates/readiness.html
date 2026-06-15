@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Readiness · HA-GitOps{% endblock %}
+{% block content %}
+<h1>Repository readiness</h1>
+
+{% if not report %}
+  <div class="card empty">No readiness report yet. Connect a repository or
+    <button class="btn" data-post="/api/readiness/refresh" data-busy="Analyzing…">run analysis</button>.</div>
+{% else %}
+  <div class="card">
+    <p>
+      Score <strong>{{ report.score }}</strong>/100 ·
+      {% if report.is_empty %}<span class="badge warn">empty repository</span>
+      {% elif report.deployable %}<span class="badge ok">deployable</span>
+      {% else %}<span class="badge err">deployment blocked</span>{% endif %}
+    </p>
+    <div class="actions">
+      <button class="btn" data-post="/api/readiness/refresh" data-busy="Analyzing…">↻ Re-analyze</button>
+      {% if report.is_empty %}
+        <button class="btn primary" data-post="/api/initialize" data-busy="Initializing…"
+                data-confirm="Push your current Home Assistant config to this empty repo?">🌱 Initialize from current config</button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% for sev in ['blocker', 'warning', 'recommendation'] %}
+    {% set items = report.findings | selectattr('severity', 'equalto', sev) | list %}
+    {% if items %}
+      <div class="card">
+        <h2>{{ {'blocker':'⛔ Blockers','warning':'⚠️ Warnings','recommendation':'💡 Recommendations'}[sev] }}</h2>
+        {% for f in items %}
+          <div class="finding {{ sev }}">
+            <div class="title">{{ f.title }}</div>
+            <div class="muted">{{ f.detail }}</div>
+            {% if f.suggestion %}<div><strong>Fix:</strong> {{ f.suggestion }}</div>{% endif %}
+            {% if f.paths %}<div class="paths">{{ f.paths | join(', ') }}</div>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% endblock %}

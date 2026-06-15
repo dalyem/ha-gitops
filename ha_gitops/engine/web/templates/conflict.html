@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Conflict · HA-GitOps{% endblock %}
+{% block content %}
+<h1>Conflict resolution</h1>
+
+{% if not conflict %}
+  <div class="card empty">No open conflict. 🎉</div>
+{% else %}
+  <div class="card">
+    <p><span class="badge err">Open conflict</span></p>
+    <dl class="kv">
+      <dt>Detected</dt><dd>{{ conflict.ts }}</dd>
+      <dt>Base</dt><dd>{{ (conflict.base_sha or '')[:8] or '—' }}</dd>
+      <dt>Remote</dt><dd>{{ (conflict.remote_sha or '')[:8] or '—' }}</dd>
+      <dt>Local</dt><dd>{{ conflict.local_summary }}</dd>
+    </dl>
+    <p class="muted">Both GitHub and your local configuration changed since the last sync.
+       Auto-deploy is blocked so nothing is overwritten. Choose how to resolve:</p>
+    <div class="actions">
+      <button class="btn primary" data-post="/api/conflict/resolve"
+              data-body='{"resolution":"push","message":"Resolve conflict: keep local configuration"}'
+              data-busy="Pushing local…" data-confirm="Push your local configuration over the GitHub version?">
+        Keep local → push to GitHub
+      </button>
+      <button class="btn" data-post="/api/conflict/resolve" data-body='{"resolution":"manual"}'
+              data-busy="Recording…">I'll resolve manually</button>
+    </div>
+    <p class="muted" style="margin-top:12px">Automatic “use GitHub version” and “save to a new
+       branch” are planned. For now, resolve in git and press Deploy Now once local is clean.</p>
+  </div>
+{% endif %}
+
+{% if history %}
+<div class="card">
+  <h2>Conflict history</h2>
+  <table>
+    <thead><tr><th>When</th><th>Remote</th><th>Status</th><th>Resolution</th></tr></thead>
+    <tbody>
+      {% for c in history %}
+      <tr><td class="muted">{{ c.ts }}</td><td class="mono">{{ (c.remote_sha or '')[:8] }}</td>
+          <td>{{ c.status }}</td><td>{{ c.resolution or '' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

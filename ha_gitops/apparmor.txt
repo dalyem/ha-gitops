@@ -1,0 +1,36 @@
+#include <tunables/global>
+
+profile ha_gitops flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  #include <abstractions/nameservice>
+  #include <abstractions/ssl_certs>
+
+  # s6-overlay / bashio bootstrap
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /usr/local/bin/** ix,
+  /etc/** r,
+
+  # Python runtime + installed packages
+  /usr/lib/python3*/** r,
+  /usr/local/lib/python3*/** r,
+
+  # git + the engine
+  /usr/bin/git cx,
+  /app/** r,
+
+  # The add-on's persistent data: clone, state DB, token, staging, snapshots.
+  /data/ rw,
+  /data/** rwk,
+
+  # The live Home Assistant config directory (mounted via homeassistant_config:rw).
+  /homeassistant/ rw,
+  /homeassistant/** rwk,
+
+  # Networking to the Supervisor and GitHub.
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+}

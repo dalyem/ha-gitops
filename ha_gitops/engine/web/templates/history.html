@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}History · HA-GitOps{% endblock %}
+{% block content %}
+<h1>Deployment &amp; sync history</h1>
+<div class="card">
+  {% if not deployments %}
+    <div class="empty">No deployments yet.</div>
+  {% else %}
+    <table>
+      <thead><tr><th>When</th><th>Dir</th><th>Commit</th><th>Status</th><th>Files</th><th>Details</th></tr></thead>
+      <tbody>
+        {% for d in deployments %}
+        <tr>
+          <td class="muted">{{ d.ts }}</td>
+          <td>{{ {'pull':'⤓ pull','push':'⤒ push','init':'🌱 init'}.get(d.direction, d.direction) }}</td>
+          <td class="mono">{{ (d.sha or '')[:8] or '—' }}</td>
+          <td>
+            <span class="badge {{ 'ok' if d.status=='success' else ('err' if 'fail' in d.status else 'info') }}">{{ d.status }}</span>
+            {% if d.restarted %}<span class="badge info">restarted</span>{% endif %}
+          </td>
+          <td>{{ d.files_changed }}</td>
+          <td>
+            {{ d.message or '' }}
+            {% if d.errors %}<ul class="mono">{% for e in d.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            {% if d.backup_slug %}<div class="muted mono">backup: {{ d.backup_slug }}</div>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+{% endblock %}

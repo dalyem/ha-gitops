@@ -1,0 +1,39 @@
+---
+configuration:
+  log_level:
+    name: Log level
+    description: >-
+      Engine log verbosity shown in the add-on log.
+  check_interval:
+    name: Check interval
+    description: >-
+      How often to poll GitHub for new commits. Use 1m, 5m, 15m, 30m, 1h, or a
+      custom value like 90s or 2h.
+  auto_deploy:
+    name: Auto-deploy new commits
+    description: >-
+      When a new commit appears and there is no conflict or local drift,
+      deploy it automatically. Turn off to require pressing Deploy Now.
+  notify_on_success:
+    name: Notify on success
+    description: Send a notification after each successful deployment.
+  notify_on_failure:
+    name: Notify on failure
+    description: Send a notification when validation or a deployment fails.
+  notify_service:
+    name: Mobile notify service
+    description: >-
+      Optional notify.* service for mobile push, e.g.
+      notify.mobile_app_your_phone. Leave blank to use persistent
+      notifications only.
+  create_github_issues_on_failure:
+    name: Open GitHub issues on failure
+    description: >-
+      (Future) Open a GitHub issue when a deployment fails. Requires the token
+      to have Issues write permission.
+  backup_before_deploy:
+    name: Backup before deploy
+    description: >-
+      Take a Supervisor partial backup (Home Assistant core + this add-on)
+      before applying each deployment.
+network: {}

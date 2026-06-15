@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Settings · HA-GitOps{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+
+<div class="card">
+  <h2>Options</h2>
+  <p class="muted">Change these in the add-on's <strong>Configuration</strong> tab, then reload.</p>
+  <dl class="kv">
+    <dt>Check interval</dt><dd>{{ options.check_interval }} ({{ options.interval_seconds }}s)</dd>
+    <dt>Auto-deploy</dt><dd>{{ options.auto_deploy }}</dd>
+    <dt>Notify on success</dt><dd>{{ options.notify_on_success }}</dd>
+    <dt>Notify on failure</dt><dd>{{ options.notify_on_failure }}</dd>
+    <dt>Notify service</dt><dd>{{ options.notify_service or '—' }}</dd>
+    <dt>Backup before deploy</dt><dd>{{ options.backup_before_deploy }}</dd>
+    <dt>Open issues on failure</dt><dd>{{ options.create_github_issues_on_failure }}</dd>
+  </dl>
+  <div class="actions"><button class="btn" data-post="/api/settings/reload" data-busy="Reloading…">↻ Reload options</button></div>
+</div>
+
+<div class="card">
+  <h2>Monitoring</h2>
+  <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+    <input type="checkbox" id="monitoring-toggle" {{ 'checked' if monitoring }}>
+    Continuous polling enabled
+  </label>
+</div>
+
+<div class="card">
+  <h2>Versions</h2>
+  <dl class="kv">
+    <dt>Add-on</dt><dd>{{ versions.addon }}</dd>
+    <dt>Home Assistant</dt><dd>{{ versions.home_assistant or 'unknown' }}</dd>
+    <dt>Supervisor</dt><dd>{{ versions.supervisor or 'unknown' }}</dd>
+  </dl>
+</div>
+
+<div class="card">
+  <h2>Recent events</h2>
+  {% if not events %}
+    <div class="empty">No events yet.</div>
+  {% else %}
+    <table>
+      <thead><tr><th>When</th><th>Level</th><th>Category</th><th>Message</th></tr></thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td class="muted">{{ e.ts }}</td>
+          <td><span class="badge {{ 'err' if e.level=='error' else ('warn' if e.level=='warning' else '') }}">{{ e.level }}</span></td>
+          <td>{{ e.category }}</td>
+          <td>{{ e.message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+{% endblock %}
