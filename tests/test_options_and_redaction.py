@@ -46,3 +46,9 @@ def test_token_redaction(tmp_path, monkeypatch):
 
     secrets_store.clear_token()
     assert secrets_store.load_token() is None
+
+
+def test_load_token_non_dict_returns_none(tmp_path, monkeypatch):
+    monkeypatch.setattr("engine.settings.CREDENTIALS_FILE", tmp_path / ".credentials")
+    (tmp_path / ".credentials").write_text('["not", "a", "dict"]')
+    assert secrets_store.load_token() is None

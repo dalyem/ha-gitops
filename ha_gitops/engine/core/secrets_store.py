@@ -68,6 +68,8 @@ def load_token() -> str | None:
         data = json.loads(settings.CREDENTIALS_FILE.read_text())
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return None
+    if not isinstance(data, dict):
+        return None
     token = data.get("token")
     if token:
         _register_redaction(token)

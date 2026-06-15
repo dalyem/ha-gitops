@@ -154,7 +154,7 @@ class GitHubClient:
 
     async def create_issue(
         self, owner: str, repo: str, title: str, body: str, labels: list[str]
-    ) -> dict | None:
+    ) -> dict:
         resp = await self._http().post(
             f"/repos/{owner}/{repo}/issues",
             json={"title": title, "body": body, "labels": labels},

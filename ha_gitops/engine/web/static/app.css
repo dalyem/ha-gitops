@@ -13,6 +13,11 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; }
 nav a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
 nav a:hover { background: var(--chip); color: var(--ink); }
 nav a.active { color: var(--brand); background: #e6f6fe; }
+/* Keyboard focus indicators (WCAG 2.4.7) */
+a:focus-visible, .btn:focus-visible, button:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--brand); outline-offset: 2px;
+}
 main { max-width: 920px; margin: 22px auto; padding: 0 16px; }
 h1 { font-size: 22px; margin: 0 0 16px; }
 h2 { font-size: 16px; margin: 0 0 12px; }

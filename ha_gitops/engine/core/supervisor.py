@@ -57,9 +57,11 @@ class SupervisorClient:
         resp = await self._http().request(method, path, timeout=timeout, **kw)
         resp.raise_for_status()
         body = resp.json()
-        if isinstance(body, dict) and body.get("result") == "error":
+        if not isinstance(body, dict):
+            raise SupervisorError(f"Unexpected Supervisor response: {type(body).__name__}")
+        if body.get("result") == "error":
             raise SupervisorError(body.get("message", "supervisor error"))
-        return body.get("data") if isinstance(body, dict) else body
+        return body.get("data")
 
     async def _core_api(self, method: str, path: str, *, timeout: float = 60.0, **kw) -> httpx.Response:
         resp = await self._http().request(method, f"/core/api{path}", timeout=timeout, **kw)
@@ -98,7 +100,12 @@ class SupervisorClient:
         data = resp.json()
         if data.get("result") == "valid":
             return ValidationResult(ok=True)
-        return ValidationResult(ok=False, errors=[data.get("errors") or "invalid configuration"])
+        errs = data.get("errors")
+        if isinstance(errs, list):
+            errors = [str(e) for e in errs] or ["invalid configuration"]
+        else:
+            errors = [errs or "invalid configuration"]
+        return ValidationResult(ok=False, errors=errors)
 
     # ---- restart ------------------------------------------------------------
     async def restart_core(self) -> None:

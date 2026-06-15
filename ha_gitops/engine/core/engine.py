@@ -89,8 +89,10 @@ class Engine:
             raise RuntimeError("No GitHub token configured.")
         return self.github
 
-    def set_token(self, token: str) -> None:
+    async def set_token(self, token: str) -> None:
         secrets_store.save_token(token)
+        if self.github is not None:
+            await self.github.aclose()
         self._token = token
         self.github = GitHubClient(token)
 
@@ -116,7 +118,7 @@ class Engine:
     ) -> ReadinessReport:
         async with self._operation("Connecting repository"):
             if token:
-                self.set_token(token)
+                await self.set_token(token)
             gh = self.require_github()
             await gh.get_repo(owner, repo)  # raises if no access
             conn = Connection(owner=owner, repo=repo, branch=branch, config_path=config_path)
@@ -231,6 +233,7 @@ class Engine:
                 sync_state, changes = await self.compute_sync_state()
             except Exception as exc:  # noqa: BLE001
                 self.last_error = str(exc)
+                sync_state = SyncState.BLOCKED  # connected but state is unknown
             if readiness_report and not readiness_report.get("deployable", True):
                 sync_state = SyncState.BLOCKED
 

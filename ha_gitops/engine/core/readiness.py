@@ -36,7 +36,7 @@ BLOCKER_RULES: list[tuple[str, str, list[str], str]] = [
     (
         "tokens_committed",
         "Token / credential files are committed",
-        ["*.token", ".google.token", "**/*.token", "*.conf"],
+        ["*.token", ".google.token", "**/*.token"],
         "Remove credential files from the repo and add them to .gitignore.",
     ),
     (
@@ -173,7 +173,12 @@ def analyze(
             )
         )
     elif gitignore_text is not None:
-        missing = [e for e in CRITICAL_GITIGNORE if e not in gitignore_text]
+        entries = {
+            ln.strip()
+            for ln in gitignore_text.splitlines()
+            if ln.strip() and not ln.strip().startswith("#")
+        }
+        missing = [e for e in CRITICAL_GITIGNORE if e not in entries]
         if missing:
             findings.append(
                 Finding(

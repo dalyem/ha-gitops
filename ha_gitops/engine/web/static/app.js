@@ -7,6 +7,7 @@ function toast(msg, isError = false) {
   const t = $("#toast");
   t.textContent = msg;
   t.classList.toggle("err", isError);
+  t.setAttribute("aria-live", isError ? "assertive" : "polite");
   t.classList.remove("hidden");
   setTimeout(() => t.classList.add("hidden"), 4000);
 }
@@ -56,8 +57,10 @@ function wireActions() {
   const monToggle = $("#monitoring-toggle");
   if (monToggle) {
     monToggle.addEventListener("change", async () => {
+      monToggle.disabled = true;
       try { await api("/api/monitoring", "POST", { enabled: monToggle.checked }); toast("Monitoring " + (monToggle.checked ? "on" : "off")); }
       catch (e) { toast(e.message, true); monToggle.checked = !monToggle.checked; }
+      finally { monToggle.disabled = false; }
     });
   }
 }
@@ -68,9 +71,11 @@ async function wireSetup() {
   if (tokenForm) {
     tokenForm.addEventListener("submit", async (ev) => {
       ev.preventDefault();
+      const tokenVal = $("#token").value.trim();
+      if (!tokenVal) { toast("Paste a token first", true); return; }
       overlay(true, "Verifying token…");
       try {
-        const r = await api("/api/token", "POST", { token: $("#token").value.trim() });
+        const r = await api("/api/token", "POST", { token: tokenVal });
         toast("Token saved" + (r.login ? " for " + r.login : ""));
         await loadRepos();
       } catch (e) { toast(e.message, true); }
@@ -99,7 +104,7 @@ async function wireSetup() {
         });
         toast("Connected. Redirecting to readiness…");
         setTimeout(() => location.href = BASE + "/readiness", 700);
-      } catch (e) { overlay(false); toast(e.message, true); }
+      } catch (e) { toast(e.message, true); } finally { overlay(false); }
     });
   }
 }

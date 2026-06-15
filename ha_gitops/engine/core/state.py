@@ -208,10 +208,15 @@ class State:
     def record_conflict(
         self, base_sha: str | None, remote_sha: str | None, local_summary: str
     ) -> int:
-        existing = self.get_open_conflict()
-        if existing and existing["remote_sha"] == remote_sha:
-            return int(existing["id"])
+        # Hold the lock across check-and-insert so concurrent callers can't both
+        # see "no open conflict" and insert duplicates for the same remote SHA.
         with self._lock:
+            row = self._conn.execute(
+                "SELECT id, remote_sha FROM conflicts WHERE status='open' "
+                "ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            if row and row["remote_sha"] == remote_sha:
+                return int(row["id"])
             cur = self._conn.execute(
                 "INSERT INTO conflicts(ts, base_sha, remote_sha, local_summary) "
                 "VALUES(?,?,?,?)",

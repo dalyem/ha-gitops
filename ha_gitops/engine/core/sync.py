@@ -73,7 +73,7 @@ def _secrets_example(secrets_path: Path) -> str:
             data = yaml.safe_load(secrets_path.read_text(encoding="utf-8")) or {}
             if isinstance(data, dict):
                 keys = list(data.keys())
-        except yaml.YAMLError:
+        except (yaml.YAMLError, OSError):
             pass
     if not keys:
         return header + 'some_api_key: ""\n'

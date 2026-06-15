@@ -44,9 +44,9 @@ async def lifespan(app: FastAPI):
     log = logging.getLogger("ha_gitops")
     engine = Engine()
     app.state.engine = engine
-    engine.scheduler.start()
-    log.info("HA-GitOps started (connected=%s)", engine.connected)
     try:
+        engine.scheduler.start()
+        log.info("HA-GitOps started (connected=%s)", engine.connected)
         yield
     finally:
         await engine.aclose()

@@ -47,3 +47,12 @@ def test_unknown_tag_is_tolerated(tmp_path):
     _write(tmp_path, "configuration.yaml", "template:\n  value: !input my_input\n")
     result = validator.validate_config_dir(tmp_path, None)
     assert result.ok, result.errors
+
+
+def test_malformed_secrets_file_is_reported(tmp_path):
+    _write(tmp_path, "configuration.yaml", "api_password: !secret foo\n")
+    secrets = _write(tmp_path, "secrets.yaml", "foo: [unclosed\n")
+    result = validator.validate_config_dir(tmp_path, secrets)
+    assert not result.ok
+    # The broken secrets file is surfaced rather than a misleading "missing foo".
+    assert any("secrets.yaml" in e for e in result.errors)

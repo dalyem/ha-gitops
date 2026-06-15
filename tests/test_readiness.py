@@ -66,3 +66,15 @@ def test_missing_gitignore_warns():
 def test_weak_gitignore_warns():
     report = readiness.analyze(CLEAN, "*.log\n", is_empty=False)
     assert "weak_gitignore" in codes(report)
+
+
+def test_gitignore_comment_does_not_satisfy_critical():
+    # secrets.yaml and .storage/ appear only as comments -> still "missing".
+    gi = "# secrets.yaml\n# .storage/\n*.db\n"
+    report = readiness.analyze(CLEAN, gi, is_empty=False)
+    assert "weak_gitignore" in codes(report)
+
+
+def test_conf_files_are_not_flagged_as_tokens():
+    report = readiness.analyze(CLEAN + ["nginx.conf"], GOOD_GITIGNORE, is_empty=False)
+    assert "tokens_committed" not in codes(report)

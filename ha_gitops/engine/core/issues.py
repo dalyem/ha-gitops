@@ -10,6 +10,7 @@ import logging
 
 from .. import settings
 from ..models import Connection
+from . import secrets_store
 from .github_client import GitHubClient, GitHubError
 
 log = logging.getLogger("ha_gitops.issues")
@@ -25,7 +26,8 @@ def fingerprint(errors: list[str]) -> str:
 def _body(
     errors: list[str], sha: str, branch: str, addon_version: str, ha_version: str, fp: str
 ) -> str:
-    error_block = "\n".join(f"- {e}" for e in errors) or "- (none captured)"
+    # Redact tokens before posting to a (potentially public) GitHub issue.
+    error_block = "\n".join(f"- {secrets_store.redact(e)}" for e in errors) or "- (none captured)"
     return (
         "Automated report from the **HA-GitOps** add-on.\n\n"
         f"- **Commit:** `{sha}`\n"

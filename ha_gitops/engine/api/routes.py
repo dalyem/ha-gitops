@@ -50,7 +50,7 @@ class ResolveIn(BaseModel):
 def _fail(exc: Exception) -> HTTPException:
     msg = str(exc)
     if isinstance(exc, GitHubError):
-        return HTTPException(status_code=exc.status or 400, detail=msg)
+        return HTTPException(status_code=exc.status if exc.status is not None else 400, detail=msg)
     if msg.startswith("Busy"):
         return HTTPException(status_code=409, detail=msg)
     return HTTPException(status_code=400, detail=msg)
@@ -65,7 +65,7 @@ async def status(request: Request):
 async def set_token(request: Request, body: TokenIn):
     engine = get_engine(request)
     try:
-        engine.set_token(body.token)
+        await engine.set_token(body.token)
         user = await engine.require_github().verify_token()
         return {"ok": True, "login": user.get("login")}
     except Exception as exc:  # noqa: BLE001

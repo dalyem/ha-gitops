@@ -100,7 +100,9 @@ def _load_secret_keys(secrets_path: Path | None) -> set[str] | None:
     try:
         data = yaml.safe_load(secrets_path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError:
-        return set()
+        # Malformed secrets.yaml — treat as unavailable so validation reports the
+        # real problem rather than a list of "missing" individual secrets.
+        return None
     return set(data.keys()) if isinstance(data, dict) else set()
 
 

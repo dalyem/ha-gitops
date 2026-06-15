@@ -17,8 +17,9 @@ profile ha_gitops flags=(attach_disconnected,mediate_deleted) {
   /usr/lib/python3*/** r,
   /usr/local/lib/python3*/** r,
 
-  # git + the engine
-  /usr/bin/git cx,
+  # git + the engine. `ix` (inherit) so git runs under this profile even when
+  # no dedicated /usr/bin/git child profile exists.
+  /usr/bin/git ix,
   /app/** r,
 
   # The add-on's persistent data: clone, state DB, token, staging, snapshots.

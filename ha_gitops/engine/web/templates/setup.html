@@ -26,8 +26,8 @@
   </p>
   <form id="token-form">
     <label for="token">Token</label>
-    <input type="password" id="token" placeholder="github_pat_…" autocomplete="off"
-           {{ 'value=********' if status.has_token }}>
+    <input type="password" id="token" autocomplete="off"
+           placeholder="{{ 'saved — paste a new token to replace' if status.has_token else 'github_pat_…' }}">
     <div class="actions"><button class="btn primary" type="submit">Save &amp; verify</button></div>
   </form>
 </div>

@@ -29,8 +29,8 @@ configuration:
   create_github_issues_on_failure:
     name: Open GitHub issues on failure
     description: >-
-      (Future) Open a GitHub issue when a deployment fails. Requires the token
-      to have Issues write permission.
+      Open a GitHub issue when a deployment fails. Requires the token to have
+      Issues write permission.
   backup_before_deploy:
     name: Backup before deploy
     description: >-
