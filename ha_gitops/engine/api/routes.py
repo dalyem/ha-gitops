@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from ..core import conflicts
 from ..core.engine import Engine
+from ..core.git_engine import GitError
 from ..core.github_client import GitHubError
 
 log = logging.getLogger("ha_gitops.api")
@@ -53,7 +54,15 @@ def _fail(exc: Exception) -> HTTPException:
         return HTTPException(status_code=exc.status if exc.status is not None else 400, detail=msg)
     if msg.startswith("Busy"):
         return HTTPException(status_code=409, detail=msg)
-    return HTTPException(status_code=400, detail=msg)
+    if isinstance(exc, GitError):
+        # Failure talking to git/GitHub (message is already token-redacted).
+        log.exception("git operation failed")
+        return HTTPException(status_code=502, detail=msg)
+    if isinstance(exc, (ValueError, RuntimeError)):
+        # Deliberate precondition/validation errors (not connected, no token, …).
+        return HTTPException(status_code=400, detail=msg)
+    log.exception("unhandled API error")
+    return HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/status")
@@ -65,8 +74,7 @@ async def status(request: Request):
 async def set_token(request: Request, body: TokenIn):
     engine = get_engine(request)
     try:
-        await engine.set_token(body.token)
-        user = await engine.require_github().verify_token()
+        user = await engine.authenticate(body.token)
         return {"ok": True, "login": user.get("login")}
     except Exception as exc:  # noqa: BLE001
         raise _fail(exc) from exc
@@ -180,6 +188,8 @@ async def resolve(request: Request, body: ResolveIn):
         except Exception as exc:  # noqa: BLE001
             raise _fail(exc) from exc
     # pull / branch / manual: record the choice; execution lands in a later phase.
+    if body.resolution not in {"pull", "branch", "manual"}:
+        raise HTTPException(status_code=400, detail="Invalid resolution.")
     engine.state.resolve_conflict(int(open_conflict["id"]), body.resolution)
     return {
         "resolved": True,

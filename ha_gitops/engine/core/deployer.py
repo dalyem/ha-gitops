@@ -131,9 +131,7 @@ class Deployer:
             if e.supervisor.available:
                 vr2 = await e.supervisor.check_config()
                 if not vr2.ok:
-                    await asyncio.to_thread(
-                        filesync.restore_snapshot, snapshot_dir, settings.HA_CONFIG_DIR
-                    )
+                    await self._safe_restore(snapshot_dir)
                     applied = False
                     return await self._fail_validation(
                         result, deployment_id, target, vr2.errors
@@ -173,9 +171,7 @@ class Deployer:
 
         except Exception as exc:  # noqa: BLE001
             if applied:
-                await asyncio.to_thread(
-                    filesync.restore_snapshot, snapshot_dir, settings.HA_CONFIG_DIR
-                )
+                await self._safe_restore(snapshot_dir)
             result.status = DeployStatus.FAILED
             result.errors = [str(exc)]
             result.message = f"Deploy failed: {exc}"
@@ -187,7 +183,20 @@ class Deployer:
             await e.notifier.deploy_failure(result)
             return result
         finally:
-            await e.git.worktree_remove(settings.STAGING_DIR)
+            try:
+                await e.git.worktree_remove(settings.STAGING_DIR)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("staging worktree cleanup failed: %s", exc)
+
+    async def _safe_restore(self, snapshot_dir: Path) -> None:
+        """Revert a partial apply; never let a restore error abort finalization."""
+        try:
+            await asyncio.to_thread(
+                filesync.restore_snapshot, snapshot_dir, settings.HA_CONFIG_DIR
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("snapshot restore failed: %s", exc)
+            self.e.state.log_event("error", "deploy", f"snapshot restore failed: {exc}")
 
     async def _fail_validation(
         self, result: DeployResult, deployment_id: int, sha: str, errors: list[str]

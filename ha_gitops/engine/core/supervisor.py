@@ -143,14 +143,22 @@ class SupervisorClient:
     async def persistent_notification(
         self, title: str, message: str, notification_id: str
     ) -> None:
-        await self._core_api(
+        resp = await self._core_api(
             "POST",
             "/services/persistent_notification/create",
             json={"title": title, "message": message, "notification_id": notification_id},
             timeout=30.0,
         )
+        if resp.status_code >= 400:
+            raise SupervisorError(
+                f"persistent_notification failed: HTTP {resp.status_code}"
+            )
 
     async def call_service(self, domain: str, service: str, data: dict) -> None:
-        await self._core_api(
+        resp = await self._core_api(
             "POST", f"/services/{domain}/{service}", json=data, timeout=30.0
         )
+        if resp.status_code >= 400:
+            raise SupervisorError(
+                f"service {domain}.{service} failed: HTTP {resp.status_code}"
+            )

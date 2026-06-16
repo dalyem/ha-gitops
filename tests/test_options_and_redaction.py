@@ -31,6 +31,16 @@ def test_options_loaded_from_file(tmp_path, monkeypatch):
     assert opts.auto_deploy is False
 
 
+def test_options_ignores_type_corrupt_values(tmp_path, monkeypatch):
+    f = tmp_path / "options.json"
+    f.write_text('{"check_interval": 5, "auto_deploy": "yes", "backup_before_deploy": false}')
+    monkeypatch.setattr("engine.settings.OPTIONS_FILE", f)
+    opts = Options.load()
+    assert opts.check_interval == "5m"          # int rejected -> default kept
+    assert opts.auto_deploy is True             # str rejected -> default kept
+    assert opts.backup_before_deploy is False   # valid bool accepted
+
+
 def test_token_redaction(tmp_path, monkeypatch):
     monkeypatch.setattr("engine.settings.DATA_DIR", tmp_path)
     monkeypatch.setattr("engine.settings.CREDENTIALS_FILE", tmp_path / ".credentials")
@@ -51,4 +61,10 @@ def test_token_redaction(tmp_path, monkeypatch):
 def test_load_token_non_dict_returns_none(tmp_path, monkeypatch):
     monkeypatch.setattr("engine.settings.CREDENTIALS_FILE", tmp_path / ".credentials")
     (tmp_path / ".credentials").write_text('["not", "a", "dict"]')
+    assert secrets_store.load_token() is None
+
+
+def test_load_token_non_string_token_returns_none(tmp_path, monkeypatch):
+    monkeypatch.setattr("engine.settings.CREDENTIALS_FILE", tmp_path / ".credentials")
+    (tmp_path / ".credentials").write_text('{"token": 12345}')
     assert secrets_store.load_token() is None

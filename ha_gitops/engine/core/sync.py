@@ -111,6 +111,10 @@ class SyncEngine:
         # Block on a true conflict (remote also moved).
         await e.git.fetch(conn.branch, tok)
         remote = await e.git.remote_head(conn.branch)
+        if remote is None:
+            result.status = DeployStatus.SKIPPED
+            result.message = "Remote branch not found on GitHub; cannot push."
+            return result
         state = conflicts.evaluate(e.state.sync_base_sha, remote, True, repo_empty=False)
         if state is SyncState.CONFLICT:
             e.state.record_conflict(e.state.sync_base_sha, remote, conflicts.summarize_local(changes))
@@ -286,7 +290,7 @@ class SyncEngine:
         e.state.last_deployed_sha = new_sha
         e.state.sync_base_sha = new_sha
         e.state.last_remote_sha = new_sha
-        e.state.set(f"etag:{conn.branch}", None)  # force a fresh read next poll
+        e.state.set(e._etag_key(conn), None)  # force a fresh read next poll
         tracked = await e.git.ls_tree(new_sha, conn.config_path)
         manifest = await asyncio.to_thread(
             filesync.build_manifest, list(tracked.keys()), settings.HA_CONFIG_DIR

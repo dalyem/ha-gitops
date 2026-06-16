@@ -59,7 +59,12 @@ class Options:
         try:
             raw = json.loads(settings.OPTIONS_FILE.read_text())
             if isinstance(raw, dict):
-                data.update({k: raw[k] for k in DEFAULTS if k in raw})
+                # Only accept values whose type matches the default, so a
+                # type-corrupt options.json can never produce a broken Options.
+                for key, default in DEFAULTS.items():
+                    value = raw.get(key)
+                    if isinstance(value, type(default)):
+                        data[key] = value
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             pass
         return cls(**data)

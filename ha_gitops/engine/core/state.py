@@ -301,7 +301,14 @@ class State:
         return [dict(r) for r in rows]
 
     def reset_sync_state(self) -> None:
-        """Forget pointers when the connection target changes."""
-        for key in ("last_deployed_sha", "last_remote_sha", "sync_base_sha", "manifest"):
-            self.set(key, None)
-        self.clear_open_conflicts(resolution="connection-changed")
+        """Forget pointers when the connection target changes (one transaction)."""
+        with self._lock:
+            self._conn.execute(
+                "DELETE FROM kv WHERE key IN "
+                "('last_deployed_sha','last_remote_sha','sync_base_sha','manifest')"
+            )
+            self._conn.execute(
+                "UPDATE conflicts SET status='resolved', resolution='connection-changed' "
+                "WHERE status='open'"
+            )
+            self._conn.commit()

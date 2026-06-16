@@ -96,6 +96,21 @@ class Engine:
         self._token = token
         self.github = GitHubClient(token)
 
+    async def authenticate(self, token: str) -> dict:
+        """Verify a token *before* persisting it, then store and swap clients."""
+        probe = GitHubClient(token)
+        try:
+            user = await probe.verify_token()
+        finally:
+            await probe.aclose()
+        await self.set_token(token)
+        return user
+
+    @staticmethod
+    def _etag_key(conn: Connection) -> str:
+        # Scope by repo + branch so switching repos can't reuse a stale ETag.
+        return f"etag:{conn.full_name}:{conn.branch}"
+
     async def list_repos(self) -> list[dict]:
         return await self.require_github().list_repos()
 
@@ -118,16 +133,19 @@ class Engine:
     ) -> ReadinessReport:
         async with self._operation("Connecting repository"):
             if token:
-                await self.set_token(token)
+                await self.authenticate(token)  # validates before persisting
             gh = self.require_github()
             await gh.get_repo(owner, repo)  # raises if no access
             conn = Connection(owner=owner, repo=repo, branch=branch, config_path=config_path)
+            tok = self.require_token()
+            # Bootstrap the clone BEFORE persisting the connection/state, so a
+            # failure here leaves the previous connection intact.
+            await self.git.ensure_repo(conn.clone_url, tok, branch)
+            await self.git.fetch(branch, tok)
             connection_store.save_connection(conn)
             self.connection = conn
             self.state.reset_sync_state()
-            tok = self.require_token()
-            await self.git.ensure_repo(conn.clone_url, tok, branch)
-            await self.git.fetch(branch, tok)
+            self.state.set(self._etag_key(conn), None)
             self.state.last_remote_sha = await self.git.remote_head(branch)
             return await self._run_readiness_locked()
 
@@ -190,12 +208,12 @@ class Engine:
         """Cheap poll of the branch head using a stored ETag."""
         conn = self.require_connection()
         gh = self.require_github()
-        etag = self.state.get(f"etag:{conn.branch}")
+        etag = self.state.get(self._etag_key(conn))
         head = await gh.get_branch_head(conn.owner, conn.repo, conn.branch, etag)
         if head.not_modified:
             return self.state.last_remote_sha, False
         if head.etag:
-            self.state.set(f"etag:{conn.branch}", head.etag)
+            self.state.set(self._etag_key(conn), head.etag)
         changed = head.sha != self.state.last_remote_sha
         self.state.last_remote_sha = head.sha
         return head.sha, changed
@@ -231,6 +249,7 @@ class Engine:
         if connected:
             try:
                 sync_state, changes = await self.compute_sync_state()
+                self.last_error = None
             except Exception as exc:  # noqa: BLE001
                 self.last_error = str(exc)
                 sync_state = SyncState.BLOCKED  # connected but state is unknown

@@ -147,7 +147,10 @@ class GitHubClient:
     # ---- issues (used by the future issue-reporting feature) ----------------
     async def search_issues(self, owner: str, repo: str, query: str) -> list[dict]:
         q = f"repo:{owner}/{repo} is:issue {query}"
-        resp = await self._get("/search/issues", params={"q": q})
+        try:
+            resp = await self._get("/search/issues", params={"q": q})
+        except (httpx.HTTPError, GitHubError):
+            return []
         if resp.status_code >= 400:
             return []
         return resp.json().get("items", [])
@@ -155,10 +158,13 @@ class GitHubClient:
     async def create_issue(
         self, owner: str, repo: str, title: str, body: str, labels: list[str]
     ) -> dict:
-        resp = await self._http().post(
-            f"/repos/{owner}/{repo}/issues",
-            json={"title": title, "body": body, "labels": labels},
-        )
+        try:
+            resp = await self._http().post(
+                f"/repos/{owner}/{repo}/issues",
+                json={"title": title, "body": body, "labels": labels},
+            )
+        except httpx.HTTPError as exc:
+            raise GitHubError(f"Could not reach GitHub to create issue: {exc}") from exc
         if resp.status_code >= 400:
             raise GitHubError(f"Could not create issue (HTTP {resp.status_code}).", resp.status_code)
         return resp.json()

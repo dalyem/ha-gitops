@@ -11,22 +11,27 @@ import json
 import logging
 import os
 import stat
+import threading
 
 from .. import settings
 
 _REDACTIONS: set[str] = set()
+_LOCK = threading.Lock()
 
 
 def _register_redaction(token: str) -> None:
     if token and len(token) >= 8:
-        _REDACTIONS.add(token)
+        with _LOCK:
+            _REDACTIONS.add(token)
 
 
 def redact(text: str) -> str:
     """Replace any known token with ``***`` in arbitrary text."""
     if not text:
         return text
-    for token in _REDACTIONS:
+    with _LOCK:
+        tokens = list(_REDACTIONS)
+    for token in tokens:
         if token in text:
             text = text.replace(token, "***redacted***")
     return text
@@ -71,8 +76,9 @@ def load_token() -> str | None:
     if not isinstance(data, dict):
         return None
     token = data.get("token")
-    if token:
-        _register_redaction(token)
+    if not isinstance(token, str) or not token:
+        return None
+    _register_redaction(token)
     return token
 
 
