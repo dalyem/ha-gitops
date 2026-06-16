@@ -15,16 +15,17 @@ def evaluate(
     local_dirty: bool,
     repo_empty: bool,
 ) -> SyncState:
-    if repo_empty:
+    # No reachable remote head: an empty repo, or the branch was deleted /
+    # unreachable since the last sync. Either way there is nothing to reconcile
+    # against, so don't fall through to a misleading IN_SYNC / LOCAL_CHANGES.
+    if repo_empty or remote_sha is None:
         return SyncState.EMPTY_REPO
 
-    # Never deployed yet.
+    # Never deployed yet, but the remote has commits to deploy.
     if base_sha is None:
-        if remote_sha is None:
-            return SyncState.EMPTY_REPO
         return SyncState.REMOTE_CHANGES
 
-    remote_moved = remote_sha is not None and remote_sha != base_sha
+    remote_moved = remote_sha != base_sha
 
     if remote_moved and local_dirty:
         return SyncState.CONFLICT
