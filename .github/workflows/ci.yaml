@@ -40,14 +40,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, aarch64]
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            build_from: ghcr.io/home-assistant/amd64-base-python:3.13-alpine3.22
+          - arch: aarch64
+            platform: linux/arm64
+            build_from: ghcr.io/home-assistant/aarch64-base-python:3.13-alpine3.22
     steps:
       - uses: actions/checkout@v4
-      - name: Build add-on
-        uses: home-assistant/builder@master
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ matrix.arch }} image
+        uses: docker/build-push-action@v6
         with:
-          args: |
-            --${{ matrix.arch }} \
-            --target /data \
-            --test \
-            --docker-hub-check false
+          context: ha_gitops
+          file: ha_gitops/Dockerfile
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            BUILD_FROM=${{ matrix.build_from }}
+          push: false
+          tags: ha-gitops:${{ matrix.arch }}

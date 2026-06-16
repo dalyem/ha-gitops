@@ -13,10 +13,9 @@ RUN apk add --no-cache git openssh-client
 
 WORKDIR /app
 
-# Install Python deps. build deps are added in a virtual package so they can
-# be dropped from the final image. NOTE: pydantic-core (pulled by FastAPI)
-# ships musllinux wheels for aarch64/amd64/armv7/i386; armhf (armv6) may need
-# a Rust toolchain to build from source — see DOCS.md "Known limitations".
+# Install Python deps. build deps are added in a virtual package so they can be
+# dropped from the final image (kept as a safety net; the pinned deps ship
+# musllinux wheels for cp313 on both aarch64 and amd64, so nothing is compiled).
 COPY requirements.txt ./
 RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev \
  && pip install --no-cache-dir -r requirements.txt \

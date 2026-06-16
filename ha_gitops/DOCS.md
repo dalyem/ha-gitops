@@ -70,8 +70,7 @@ add-on actively refuses to commit them.
 - `check_config` validates YAML/schema, not runtime behaviour; a config can validate yet
   fail at startup (e.g. a missing custom integration). The post-restart health check and
   the pre-deploy backup mitigate this.
-- **armhf (armv6)** images may need a Rust toolchain to build a dependency from source; the
-  other four architectures use prebuilt wheels.
+- Architectures: **aarch64** and **amd64** (the 32-bit arches were deprecated in HA 2025.12).
 - One repo ↔ one Home Assistant instance. Pointing several instances at one repo will diverge.
 
 ## 7. Security
