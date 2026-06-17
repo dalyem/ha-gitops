@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Local changes · HA-GitOps{% endblock %}
+{% set lc = status.local_changes %}
+{% block content %}
+<h1>Local changes</h1>
+
+{% if not status.connected %}
+  <div class="card empty">Connect a repository first.</div>
+{% elif not (lc.modified or lc.added or lc.deleted) %}
+  <div class="card empty">No local changes — your configuration matches GitHub. ✓</div>
+{% else %}
+  <div class="card">
+    <p class="muted">These files differ from the last synced commit. Pushing validates the
+       live configuration first and never includes secrets, databases or runtime files.</p>
+    <ul class="filelist">
+      {% for p in lc.modified %}<li class="mod">~ {{ p }}</li>{% endfor %}
+      {% for p in lc.added %}<li class="add">+ {{ p }}</li>{% endfor %}
+      {% for p in lc.deleted %}<li class="del">− {{ p }}</li>{% endfor %}
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Push to GitHub</h2>
+    {% if status.sync_state == 'conflict' %}
+      <p><span class="badge err">Conflict</span> GitHub also changed — resolve on the
+        <a href="{{ base_path }}/conflict">Conflict</a> page before pushing.</p>
+    {% endif %}
+    <label for="commit-msg">Commit message</label>
+    <input type="text" id="commit-msg" value="Sync Home Assistant local configuration changes">
+    <div class="actions">
+      <button class="btn primary" data-post="/api/push" data-busy="Validating &amp; pushing…"
+              data-body-from="#commit-msg" data-body-key="message"
+              {{ 'disabled' if status.sync_state == 'conflict' }}>⤒ Push changes</button>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

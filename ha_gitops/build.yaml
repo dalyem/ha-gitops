@@ -1,0 +1,10 @@
+---
+# Per-architecture base images. HA's base-python images bundle Python,
+# s6-overlay and bashio. armv7/armhf/i386 were deprecated in HA 2025.12, so
+# only the two current 64-bit architectures are built.
+build_from:
+  aarch64: ghcr.io/home-assistant/aarch64-base-python:3.13-alpine3.22
+  amd64: ghcr.io/home-assistant/amd64-base-python:3.13-alpine3.22
+labels:
+  org.opencontainers.image.title: HA-GitOps
+  org.opencontainers.image.source: https://github.com/dalyem/ha-gitops

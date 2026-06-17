@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}HA-GitOps{% endblock %}</title>
+  <link rel="stylesheet" href="{{ base_path }}/static/app.css">
+  <script>window.BASE_PATH = {{ base_path | tojson }};</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">⎇ HA-GitOps</div>
+    <nav>
+      <a href="{{ base_path }}/" class="{{ 'active' if page == 'dashboard' }}">Dashboard</a>
+      <a href="{{ base_path }}/setup" class="{{ 'active' if page == 'setup' }}">Setup</a>
+      <a href="{{ base_path }}/readiness" class="{{ 'active' if page == 'readiness' }}">Readiness</a>
+      <a href="{{ base_path }}/changes" class="{{ 'active' if page == 'changes' }}">Changes</a>
+      <a href="{{ base_path }}/conflict" class="{{ 'active' if page == 'conflict' }}">Conflict</a>
+      <a href="{{ base_path }}/history" class="{{ 'active' if page == 'history' }}">History</a>
+      <a href="{{ base_path }}/settings" class="{{ 'active' if page == 'settings' }}">Settings</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <div id="overlay" class="overlay hidden"><div class="spinner"></div><span id="overlay-msg">Working…</span></div>
+  <script src="{{ base_path }}/static/app.js"></script>
+</body>
+</html>

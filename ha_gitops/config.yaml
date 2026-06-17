@@ -1,0 +1,46 @@
+---
+name: HA-GitOps
+slug: ha_gitops
+version: "0.1.0"
+description: >-
+  GitOps-style, validation-gated configuration sync between a GitHub
+  repository and Home Assistant. A bad commit can never take HA down.
+url: https://github.com/dalyem/ha-gitops
+arch:
+  - aarch64
+  - amd64
+boot: manual
+init: false
+ingress: true
+panel_icon: mdi:source-branch-sync
+panel_title: GitOps
+# Supervisor API: read versions, create partial backups, restart Core.
+hassio_api: true
+# Core API proxy: config check, persistent notifications, notify.* services.
+homeassistant_api: true
+# `manager` covers core restart + partial backups today. TODO(phase-0):
+# verify against the running Supervisor and trim to the least role that
+# still permits POST /core/restart and POST /backups/new/partial.
+hassio_role: manager
+map:
+  # Modern replacement for the deprecated `config` map. Mounts the live
+  # Home Assistant config directory at /homeassistant (read-write).
+  - homeassistant_config:rw
+options:
+  log_level: info
+  check_interval: 5m
+  auto_deploy: true
+  notify_on_success: false
+  notify_on_failure: true
+  notify_service: ""
+  create_github_issues_on_failure: false
+  backup_before_deploy: true
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+  check_interval: str
+  auto_deploy: bool
+  notify_on_success: bool
+  notify_on_failure: bool
+  notify_service: str?
+  create_github_issues_on_failure: bool
+  backup_before_deploy: bool

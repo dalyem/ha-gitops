@@ -1,0 +1,13 @@
+# Web/API (no python-multipart: the UI posts JSON, not multipart forms)
+fastapi==0.115.6
+uvicorn==0.34.0
+jinja2==3.1.5
+
+# HTTP client for the GitHub and Supervisor APIs
+httpx==0.28.1
+
+# YAML parsing for Home Assistant config validation (mirrors HA's loader)
+PyYAML==6.0.2
+
+# .gitignore-style pattern matching
+pathspec==0.12.1

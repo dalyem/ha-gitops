@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Setup · HA-GitOps{% endblock %}
+{% block content %}
+<h1>Setup</h1>
+<script>window.HAS_TOKEN = {{ 'true' if status.has_token else 'false' }};</script>
+
+{% if status.connection %}
+<div class="card">
+  <h2>Currently connected</h2>
+  <dl class="kv">
+    <dt>Repository</dt><dd>{{ status.connection.full_name }}</dd>
+    <dt>Branch</dt><dd>{{ status.connection.branch }}</dd>
+    <dt>Config path</dt><dd>{{ status.connection.config_path or '(repo root)' }}</dd>
+  </dl>
+  <p class="muted">Connecting a different repository below will replace this and reset sync state.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>1 · GitHub token</h2>
+  <p class="muted">
+    Paste a <strong>fine-grained Personal Access Token</strong> scoped to your repo with
+    <em>Contents: Read&nbsp;and&nbsp;write</em>, <em>Metadata: Read</em>
+    (and <em>Issues: Write</em> if you enable issue reporting).
+    It is stored only on this device and never committed or logged.
+  </p>
+  <form id="token-form">
+    <label for="token">Token</label>
+    <input type="password" id="token" autocomplete="off"
+           placeholder="{{ 'saved — paste a new token to replace' if status.has_token else 'github_pat_…' }}">
+    <div class="actions"><button class="btn primary" type="submit">Save &amp; verify</button></div>
+  </form>
+</div>
+
+<div class="card {{ '' if status.has_token else 'hidden' }}" id="repo-step">
+  <h2>2 · Repository &amp; branch</h2>
+  <label for="repo-select">Repository</label>
+  <select id="repo-select"></select>
+  <label for="branch-select">Branch</label>
+  <select id="branch-select"></select>
+  <label for="config-path">Config path within the repo <span class="muted">(blank = repo root)</span></label>
+  <input type="text" id="config-path" placeholder="" value="{{ status.connection.config_path if status.connection else '' }}">
+  <div class="actions">
+    <button class="btn primary" id="connect-btn">Connect &amp; analyze →</button>
+  </div>
+</div>
+{% endblock %}
