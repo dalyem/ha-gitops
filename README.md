@@ -31,7 +31,7 @@ ha-gitops/
 ├─ repository.yaml          # Home Assistant add-on store descriptor
 ├─ ha_gitops/               # the add-on (Docker build context)
 │  ├─ config.yaml           # add-on manifest
-│  ├─ Dockerfile / build.yaml / run.sh / apparmor.txt
+│  ├─ Dockerfile / build.yaml / run.sh
 │  ├─ requirements.txt
 │  └─ engine/               # the Python deployment engine + web UI
 ├─ tests/                   # pytest unit/integration tests
