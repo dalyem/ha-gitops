@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- Fix: remove the custom AppArmor profile that blocked the s6 init system and
+  caused the add-on to crash-loop at startup ("can't open '/init':
+  Permission denied"). A tested profile will return in a later hardening pass.
+
 ## 0.1.0 (unreleased)
 
 Initial MVP scaffold.
