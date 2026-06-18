@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- Fix: the Web UI rendered unstyled under HA Ingress because the external
+  `/static/app.css` and `app.js` links were mis-routed by the per-session
+  ingress path prefix. CSS/JS are now inlined into the page shell, and the
+  ingress prefix is read from the `X-Ingress-Path` header for nav/API URLs.
+
 ## 0.1.1
 
 - Fix: remove the custom AppArmor profile that blocked the s6 init system and

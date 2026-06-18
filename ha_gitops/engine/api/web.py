@@ -16,7 +16,14 @@ def _engine(request: Request) -> Engine:
 
 def _render(request: Request, name: str, **extra) -> HTMLResponse:
     templates = request.app.state.templates
-    context = {"base_path": request.scope.get("root_path", ""), **extra}
+    # Under HA Ingress the add-on is served beneath a per-session path prefix,
+    # passed via the X-Ingress-Path header. Use it to build nav/API URLs.
+    base_path = (
+        request.headers.get("X-Ingress-Path")
+        or request.scope.get("root_path", "")
+        or ""
+    ).rstrip("/")
+    context = {"base_path": base_path, **extra}
     return templates.TemplateResponse(request, name, context)
 
 

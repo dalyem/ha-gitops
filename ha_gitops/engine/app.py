@@ -5,8 +5,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 
 from .core import secrets_store
@@ -55,15 +54,9 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="HA-GitOps", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.templates = Jinja2Templates(directory=str(WEB_DIR / "templates"))
-    app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
-
-    @app.middleware("http")
-    async def ingress_root_path(request: Request, call_next):
-        # Supervisor sets X-Ingress-Path to the base path the browser is using.
-        ingress = request.headers.get("X-Ingress-Path")
-        if ingress:
-            request.scope["root_path"] = ingress.rstrip("/")
-        return await call_next(request)
+    # No static mount: CSS/JS are inlined in the page shell so they can't be
+    # mis-routed under the HA Ingress path prefix. The prefix (X-Ingress-Path)
+    # is read per-request when rendering, for nav and API URLs.
 
     from .api import routes, web
 
