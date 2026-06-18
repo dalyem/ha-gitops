@@ -1,7 +1,7 @@
 ---
 name: HA-GitOps
 slug: ha_gitops
-version: "0.1.2"
+version: "0.1.3"
 description: >-
   GitOps-style, validation-gated configuration sync between a GitHub
   repository and Home Assistant. A bad commit can never take HA down.

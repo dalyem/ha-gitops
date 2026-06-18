@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- Fix: Initialize/push no longer try to commit rotated logs (`home-assistant.log.1`
+  etc.) — the `*.log` pattern didn't match them. Added `*.log.*` everywhere.
+- Add: a hard 50 MB per-file size cap on commits (well under GitHub's 100 MB
+  limit); oversized files are skipped and reported, never pushed.
+- Fix: Initialize now re-clones from scratch, so a previous failed init (which
+  may have left an oversized commit locally) can't poison the retry.
+
 ## 0.1.2
 
 - Fix: the Web UI rendered unstyled under HA Ingress because the external

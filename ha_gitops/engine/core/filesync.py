@@ -30,6 +30,7 @@ ALWAYS_IGNORE: tuple[str, ...] = (
     "*.db-wal",
     "*.sqlite",
     "*.log",
+    "*.log.*",   # rotated logs: home-assistant.log.1, .2, .gz, .fault, …
     ".HA_VERSION",
     ".ha_run.lock",
     ".cloud/",
@@ -45,6 +46,10 @@ ALWAYS_IGNORE: tuple[str, ...] = (
     "*.token",
     ".google.token",
 )
+
+# Hard safety cap: never stage a file larger than this for commit, regardless of
+# patterns. Well under GitHub's 100 MB hard reject (and its 50 MB warning).
+MAX_COMMIT_FILE_BYTES = 50 * 1024 * 1024
 
 
 def sha256_file(path: Path) -> str:

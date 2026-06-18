@@ -25,6 +25,6 @@ COPY engine ./engine
 COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 
-LABEL io.hass.version="0.1.2" io.hass.type="addon"
+LABEL io.hass.version="0.1.3" io.hass.type="addon"
 
 CMD ["/run.sh"]

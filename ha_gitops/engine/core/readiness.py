@@ -58,8 +58,8 @@ WARNING_RULES: list[tuple[str, str, list[str], str]] = [
     (
         "logs_committed",
         "Log files are committed",
-        ["*.log", "**/*.log"],
-        "Logs contain runtime/personal data. Add `*.log` to .gitignore.",
+        ["*.log", "**/*.log", "*.log.*", "**/*.log.*"],
+        "Logs contain runtime/personal data. Add `*.log` and `*.log.*` to .gitignore.",
     ),
     (
         "runtime_artifacts",

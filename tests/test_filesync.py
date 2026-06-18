@@ -45,8 +45,9 @@ def test_detect_local_changes(tmp_path):
     # modify, add a tracked-able file, add an ignored secret, delete one
     (ha / "automations.yaml").write_text("changed\n")
     (ha / "scenes.yaml").write_text("new\n")
-    (ha / "secrets.yaml").write_text("token: abc\n")     # must be ignored
-    (ha / "home-assistant_v2.db").write_text("binary")    # must be ignored
+    (ha / "secrets.yaml").write_text("token: abc\n")        # must be ignored
+    (ha / "home-assistant_v2.db").write_text("binary")       # must be ignored
+    (ha / "home-assistant.log.1").write_text("rotated log")  # must be ignored
     (ha / "configuration.yaml").unlink()
 
     changes = filesync.detect_local_changes(manifest, ha, gitignore_text=None)
@@ -55,9 +56,13 @@ def test_detect_local_changes(tmp_path):
     assert "scenes.yaml" in changes.added
     assert "secrets.yaml" not in changes.added
     assert "home-assistant_v2.db" not in changes.added
+    assert "home-assistant.log.1" not in changes.added       # rotated logs ignored
 
 
 def test_recommended_gitignore_covers_essentials():
     spec = filesync.build_ignore_spec(None)
-    for p in ["secrets.yaml", ".storage/core.auth", "home-assistant_v2.db", "x.log"]:
+    for p in [
+        "secrets.yaml", ".storage/core.auth", "home-assistant_v2.db",
+        "x.log", "home-assistant.log.1", "home-assistant.log.2.gz",
+    ]:
         assert spec.match_file(p), p

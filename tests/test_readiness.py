@@ -78,3 +78,8 @@ def test_gitignore_comment_does_not_satisfy_critical():
 def test_conf_files_are_not_flagged_as_tokens():
     report = readiness.analyze(CLEAN + ["nginx.conf"], GOOD_GITIGNORE, is_empty=False)
     assert "tokens_committed" not in codes(report)
+
+
+def test_rotated_logs_are_flagged():
+    report = readiness.analyze(CLEAN + ["home-assistant.log.1"], GOOD_GITIGNORE, is_empty=False)
+    assert "logs_committed" in codes(report)

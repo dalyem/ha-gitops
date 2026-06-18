@@ -40,8 +40,9 @@ known_devices.yaml
 .ha_run.lock
 .uuid
 
-# Logs
+# Logs (including rotated: home-assistant.log.1, .2, .gz, …)
 *.log
+*.log.*
 
 # Caches & dependencies
 deps/
@@ -140,10 +141,17 @@ class SyncEngine:
             await e.git.reset_to(conn.branch, remote)
             dest = self._repo_cfg()
             guard = filesync.build_ignore_spec(None)  # ALWAYS_IGNORE only
-            applied = await asyncio.to_thread(
+            applied, skipped = await asyncio.to_thread(
                 self._copy_changes_into_repo, changes, dest, guard
             )
             result.files_changed = applied
+            if skipped:
+                e.state.log_event(
+                    "warning", "sync",
+                    f"Skipped {len(skipped)} oversized file(s) "
+                    f"(>{filesync.MAX_COMMIT_FILE_BYTES // (1024 * 1024)}MB): "
+                    f"{', '.join(skipped[:10])}",
+                )
 
             await e.git.stage_all(conn.config_path)
             if not await e.git.has_staged_changes():
@@ -173,13 +181,17 @@ class SyncEngine:
             e.state.log_event("error", "sync", result.message)
             return result
 
-    def _copy_changes_into_repo(self, changes, dest: Path, guard) -> int:
+    def _copy_changes_into_repo(self, changes, dest: Path, guard) -> tuple[int, list[str]]:
         count = 0
+        skipped: list[str] = []
         for rel in changes.modified + changes.added:
             if guard.match_file(rel):
                 continue
             src = settings.HA_CONFIG_DIR / rel
             if not src.is_file():
+                continue
+            if src.stat().st_size > filesync.MAX_COMMIT_FILE_BYTES:
+                skipped.append(rel)
                 continue
             target = dest / rel
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -192,7 +204,7 @@ class SyncEngine:
             if target.exists():
                 target.unlink()
                 count += 1
-        return count
+        return count, skipped
 
     # ---- empty repo initialization -----------------------------------------
     async def initialize(self) -> DeployResult:
@@ -214,9 +226,18 @@ class SyncEngine:
         )
         result.deployment_id = deployment_id
         try:
+            # Fresh clone so a previous failed init can't re-push a bad commit.
+            await e.git.reset_clone(conn.clone_url, tok)
             dest = self._repo_cfg()
-            copied = await asyncio.to_thread(self._populate_initial_repo, dest)
+            copied, skipped = await asyncio.to_thread(self._populate_initial_repo, dest)
             result.files_changed = copied
+            if skipped:
+                e.state.log_event(
+                    "warning", "sync",
+                    f"Skipped {len(skipped)} oversized file(s) "
+                    f"(>{filesync.MAX_COMMIT_FILE_BYTES // (1024 * 1024)}MB): "
+                    f"{', '.join(skipped[:10])}",
+                )
 
             await e.git.stage_all(conn.config_path)
             if not await e.git.has_staged_changes():
@@ -235,6 +256,8 @@ class SyncEngine:
             result.status = DeployStatus.SUCCESS
             result.sha = new_sha
             result.message = f"Initialized repository with {copied} file(s) ({new_sha[:8]})."
+            if skipped:
+                result.message += f" Skipped {len(skipped)} oversized file(s) (e.g. {skipped[0]})."
             e.state.finish_deployment(
                 deployment_id, status=result.status.value, sha=new_sha,
                 files_changed=copied, message=result.message,
@@ -249,7 +272,7 @@ class SyncEngine:
             e.state.log_event("error", "sync", result.message)
             return result
 
-    def _populate_initial_repo(self, dest: Path) -> int:
+    def _populate_initial_repo(self, dest: Path) -> tuple[int, list[str]]:
         dest.mkdir(parents=True, exist_ok=True)
         # Generate .gitignore and secrets.yaml.example first.
         (dest / ".gitignore").write_text(RECOMMENDED_GITIGNORE)
@@ -258,17 +281,21 @@ class SyncEngine:
         )
         spec = filesync.build_ignore_spec(RECOMMENDED_GITIGNORE)
         count = 2
+        skipped: list[str] = []
         for rel in filesync._walk_relpaths(settings.HA_CONFIG_DIR, spec):
             if spec.match_file(rel):
                 continue
             src = settings.HA_CONFIG_DIR / rel
             if not src.is_file():
                 continue
+            if src.stat().st_size > filesync.MAX_COMMIT_FILE_BYTES:
+                skipped.append(rel)
+                continue
             target = dest / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, target)
             count += 1
-        return count
+        return count, skipped
 
     # ---- shared -------------------------------------------------------------
     async def _validate_live(self) -> list[str]:

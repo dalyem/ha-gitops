@@ -112,6 +112,18 @@ class GitEngine:
         # Best-effort checkout of the requested branch if it exists.
         await self._run("checkout", branch, cwd=self.repo_dir, check=False)
 
+    async def reset_clone(self, clone_url: str, token: str) -> None:
+        """Remove any existing clone and clone fresh.
+
+        Used by the empty-repo init so a previous *failed* init (which may have
+        left a local commit with an oversized file) can't poison the retry.
+        """
+        if self.repo_dir.exists():
+            shutil.rmtree(self.repo_dir)
+        self.repo_dir.parent.mkdir(parents=True, exist_ok=True)
+        await self._run("clone", clone_url, str(self.repo_dir), token=token)
+        await self.set_identity()
+
     async def set_identity(self) -> None:
         await self._run("config", "user.name", "HA-GitOps", cwd=self.repo_dir, check=False)
         await self._run(
