@@ -34,6 +34,7 @@ ALWAYS_IGNORE: tuple[str, ...] = (
     ".HA_VERSION",
     ".ha_run.lock",
     ".cloud/",
+    ".cache/",   # HA's downloaded brand-icon / runtime cache
     "deps/",
     "tts/",
     "__pycache__/",

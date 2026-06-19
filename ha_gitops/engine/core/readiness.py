@@ -70,8 +70,10 @@ WARNING_RULES: list[tuple[str, str, list[str], str]] = [
     (
         "cache_committed",
         "Cache / dependency directories are committed",
-        ["deps", "deps/**", "tts", "tts/**", "__pycache__/**", "**/__pycache__/**"],
-        "These are regenerated at runtime. Add `deps/`, `tts/`, `__pycache__/` to .gitignore.",
+        [".cache", ".cache/**", "deps", "deps/**", "tts", "tts/**",
+         "__pycache__/**", "**/__pycache__/**"],
+        "These are regenerated at runtime. Add `.cache/`, `deps/`, `tts/`, "
+        "`__pycache__/` to .gitignore.",
     ),
     (
         "privacy_files",

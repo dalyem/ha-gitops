@@ -45,6 +45,7 @@ known_devices.yaml
 *.log.*
 
 # Caches & dependencies
+.cache/
 deps/
 tts/
 __pycache__/

@@ -64,5 +64,6 @@ def test_recommended_gitignore_covers_essentials():
     for p in [
         "secrets.yaml", ".storage/core.auth", "home-assistant_v2.db",
         "x.log", "home-assistant.log.1", "home-assistant.log.2.gz",
+        ".cache/brands/integrations/acme/dark_icon.png",
     ]:
         assert spec.match_file(p), p

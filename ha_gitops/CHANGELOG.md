@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+- Ignore Home Assistant's `.cache/` directory (downloaded brand icons / runtime
+  cache) — it was being committed (hundreds of files, several MB of churn).
+  Added to the recommended `.gitignore`, the always-ignore set, and readiness.
+
 ## 0.1.4
 
 - Readiness now detects when Lovelace dashboards are in UI/"storage" mode (in
