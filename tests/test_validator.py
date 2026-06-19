@@ -43,6 +43,30 @@ def test_missing_include(tmp_path):
     assert any("missing.yaml" in e for e in result.errors)
 
 
+def test_missing_include_dir_is_warning_not_error(tmp_path):
+    # An empty themes/ dir can't be stored by git; missing it must not block deploy.
+    _write(tmp_path, "configuration.yaml", "frontend:\n  themes: !include_dir_merge_named themes\n")
+    result = validator.validate_config_dir(tmp_path, None)
+    assert result.ok
+    assert any("themes" in w for w in result.warnings)
+
+
+def test_include_dir_present_on_live_passes(tmp_path):
+    cfg, live = tmp_path / "cfg", tmp_path / "live"
+    _write(cfg, "configuration.yaml", "frontend:\n  themes: !include_dir_merge_named themes\n")
+    (live / "themes").mkdir(parents=True)  # empty themes/ exists on the live instance
+    result = validator.validate_config_dir(cfg, None, live_dir=live)
+    assert result.ok and not result.warnings
+
+
+def test_include_file_present_on_live_passes(tmp_path):
+    cfg, live = tmp_path / "cfg", tmp_path / "live"
+    _write(cfg, "configuration.yaml", "device_tracker: !include known_devices.yaml\n")
+    _write(live, "known_devices.yaml", "{}\n")  # gitignored file lives only on the instance
+    result = validator.validate_config_dir(cfg, None, live_dir=live)
+    assert result.ok
+
+
 def test_unknown_tag_is_tolerated(tmp_path):
     _write(tmp_path, "configuration.yaml", "template:\n  value: !input my_input\n")
     result = validator.validate_config_dir(tmp_path, None)

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -296,6 +297,20 @@ class SyncEngine:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, target)
             count += 1
+
+        # Preserve non-ignored empty directories (git can't store empty dirs) so
+        # !include_dir_* targets like themes/ exist in the repo.
+        for dirpath, dirnames, _ in os.walk(settings.HA_CONFIG_DIR):
+            rel_dir = os.path.relpath(dirpath, settings.HA_CONFIG_DIR)
+            rel_dir = "" if rel_dir == "." else rel_dir.replace(os.sep, "/")
+            dirnames[:] = [
+                d for d in dirnames
+                if d != ".git" and not spec.match_file((f"{rel_dir}/{d}" if rel_dir else d) + "/")
+            ]
+            if rel_dir and not (dest / rel_dir).exists():
+                (dest / rel_dir).mkdir(parents=True, exist_ok=True)
+                (dest / rel_dir / ".gitkeep").write_text("")
+                count += 1
         return count, skipped
 
     # ---- shared -------------------------------------------------------------

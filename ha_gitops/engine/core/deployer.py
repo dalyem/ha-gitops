@@ -99,7 +99,7 @@ class Deployer:
             staging_cfg = self._config_dir(settings.STAGING_DIR, conn.config_path)
             secrets_path = settings.HA_CONFIG_DIR / "secrets.yaml"
             vr = await asyncio.to_thread(
-                validator.validate_config_dir, staging_cfg, secrets_path
+                validator.validate_config_dir, staging_cfg, secrets_path, settings.HA_CONFIG_DIR
             )
             if not vr.ok:
                 return await self._fail_validation(result, deployment_id, target, vr.errors)

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.6
+
+- Fix: deploy no longer fails validation when the config references an empty or
+  optional directory that git can't store — e.g. the default
+  `frontend: themes: !include_dir_merge_named themes`. The validator now accepts
+  an `!include`/`!include_dir` target that exists on the live instance, and a
+  missing `!include_dir` is a warning rather than a blocker (Home Assistant's
+  `check_config` stays the authoritative gate).
+- Initialize writes a `.gitkeep` into non-ignored empty directories so folders
+  like `themes/` and `packages/` are preserved in the repo.
+
 ## 0.1.5
 
 - Ignore Home Assistant's `.cache/` directory (downloaded brand icons / runtime

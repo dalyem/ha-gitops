@@ -3,6 +3,11 @@
 This runs against an *isolated* checkout in ``/data`` (never the live config) so most
 breakage is caught before anything touches Home Assistant. Home Assistant's own
 ``check_config`` (Layer 2) remains the authoritative gate before any restart.
+
+An ``!include`` / ``!include_dir`` target that is missing from the repo but present on
+the **live** instance (e.g. an empty ``themes/`` dir that git can't store, or a
+gitignored file) is not a failure: the deploy never removes untracked live files, so
+those targets still exist at runtime.
 """
 from __future__ import annotations
 
@@ -13,33 +18,62 @@ import yaml
 from ..models import ValidationResult
 
 
-def _make_loader(basedir: Path, secret_keys: set[str], includes: list[str], errors: list[str], visited: set[Path]):
+class _Ctx:
+    __slots__ = (
+        "secret_keys", "includes", "errors", "warnings", "visited",
+        "config_root", "live_root",
+    )
+
+    def __init__(self, config_root: Path, live_root: Path | None) -> None:
+        self.secret_keys: set[str] = set()
+        self.includes: list[str] = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
+        self.visited: set[Path] = set()
+        self.config_root = config_root
+        self.live_root = live_root
+
+    def exists_in_live(self, target: Path, want_dir: bool = False) -> bool:
+        """Does ``target`` (under the staging config root) exist under the live root?"""
+        if not self.live_root:
+            return False
+        try:
+            rel = target.relative_to(self.config_root)
+        except ValueError:
+            return False
+        live = self.live_root / rel
+        return live.is_dir() if want_dir else live.exists()
+
+
+def _make_loader(basedir: Path, ctx: _Ctx):
     class _HALoader(yaml.SafeLoader):
         pass
 
-    def _resolve_include(node_value: str) -> Path:
+    def _resolve(node_value: str) -> Path:
         return (basedir / node_value).resolve()
 
     def include(loader: yaml.SafeLoader, node):  # !include file.yaml
         fn = loader.construct_scalar(node)
-        target = _resolve_include(fn)
-        includes.append(str(target))
+        target = _resolve(fn)
+        ctx.includes.append(str(target))
         if target.is_file():
-            _load_file(target, secret_keys, includes, errors, visited)
-            return {}
-        errors.append(f"!include target not found: {fn}")
+            _load_file(target, ctx)
+        elif not ctx.exists_in_live(target):
+            ctx.errors.append(f"!include target not found: {fn}")
         return {}
 
     def include_dir(loader: yaml.SafeLoader, node):  # !include_dir_* dir
         dirname = loader.construct_scalar(node)
-        target = _resolve_include(dirname)
-        includes.append(str(target))
-        if not target.is_dir():
-            errors.append(f"!include_dir target not found: {dirname}")
+        target = _resolve(dirname)
+        ctx.includes.append(str(target))
+        if not target.is_dir() and not ctx.exists_in_live(target, want_dir=True):
+            # Not fatal: an empty/optional dir; HA's check_config (Layer 2) is the
+            # authoritative gate on the live instance.
+            ctx.warnings.append(f"!include_dir target not found: {dirname}")
         return []
 
     def secret(loader: yaml.SafeLoader, node):  # !secret key
-        secret_keys.add(loader.construct_scalar(node))
+        ctx.secret_keys.add(loader.construct_scalar(node))
         return ""
 
     def passthrough(loader: yaml.SafeLoader, node):  # !env_var, !input, etc.
@@ -63,27 +97,21 @@ def _make_loader(basedir: Path, secret_keys: set[str], includes: list[str], erro
     return _HALoader
 
 
-def _load_file(
-    path: Path,
-    secret_keys: set[str],
-    includes: list[str],
-    errors: list[str],
-    visited: set[Path],
-) -> None:
+def _load_file(path: Path, ctx: _Ctx) -> None:
     path = path.resolve()
-    if path in visited:
+    if path in ctx.visited:
         return
-    visited.add(path)
+    ctx.visited.add(path)
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        errors.append(f"{path.name}: cannot read ({exc})")
+        ctx.errors.append(f"{path.name}: cannot read ({exc})")
         return
-    loader_cls = _make_loader(path.parent, secret_keys, includes, errors, visited)
+    loader_cls = _make_loader(path.parent, ctx)
     try:
         yaml.load(text, Loader=loader_cls)  # noqa: S506 - custom safe loader
     except yaml.YAMLError as exc:
-        errors.append(f"{path.name}: {_fmt_yaml_error(exc)}")
+        ctx.errors.append(f"{path.name}: {_fmt_yaml_error(exc)}")
 
 
 def _fmt_yaml_error(exc: yaml.YAMLError) -> str:
@@ -106,17 +134,14 @@ def _load_secret_keys(secrets_path: Path | None) -> set[str] | None:
     return set(data.keys()) if isinstance(data, dict) else set()
 
 
-def validate_config_dir(config_dir: Path, secrets_path: Path | None) -> ValidationResult:
-    config_dir = Path(config_dir)
-    errors: list[str] = []
-    warnings: list[str] = []
-    secret_keys: set[str] = set()
-    includes: list[str] = []
-    visited: set[Path] = set()
+def validate_config_dir(
+    config_dir: Path, secrets_path: Path | None, live_dir: Path | None = None
+) -> ValidationResult:
+    config_dir = Path(config_dir).resolve()
+    ctx = _Ctx(config_root=config_dir, live_root=Path(live_dir).resolve() if live_dir else None)
 
     if not (config_dir / "configuration.yaml").is_file():
-        errors.append("configuration.yaml not found at the config path.")
-        return ValidationResult(ok=False, errors=errors)
+        return ValidationResult(ok=False, errors=["configuration.yaml not found at the config path."])
 
     # Parse every YAML file (entry point + standalone) to catch all syntax errors.
     yaml_files = sorted(
@@ -124,19 +149,19 @@ def validate_config_dir(config_dir: Path, secrets_path: Path | None) -> Validati
         if p.suffix in (".yaml", ".yml") and ".git" not in p.parts and ".storage" not in p.parts
     )
     for path in yaml_files:
-        _load_file(path, secret_keys, includes, errors, visited)
+        _load_file(path, ctx)
 
     # Verify referenced secrets exist.
     available = _load_secret_keys(secrets_path)
-    if secret_keys:
+    if ctx.secret_keys:
         if available is None:
-            errors.append(
-                f"{len(secret_keys)} !secret reference(s) but secrets.yaml is not available "
-                "for validation."
+            ctx.errors.append(
+                f"{len(ctx.secret_keys)} !secret reference(s) but secrets.yaml is not "
+                "available for validation."
             )
         else:
-            missing = sorted(secret_keys - available)
+            missing = sorted(ctx.secret_keys - available)
             if missing:
-                errors.append("Missing secrets: " + ", ".join(missing[:20]))
+                ctx.errors.append("Missing secrets: " + ", ".join(missing[:20]))
 
-    return ValidationResult(ok=not errors, errors=errors, warnings=warnings)
+    return ValidationResult(ok=not ctx.errors, errors=ctx.errors, warnings=ctx.warnings)
