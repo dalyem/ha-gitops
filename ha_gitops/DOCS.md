@@ -63,7 +63,39 @@ dashboards in storage mode, integrations, users), `home-assistant_v2.db`, logs, 
 add-on actively refuses to commit them.
 
 > Edits you make in the UI that land in **`.storage`** (e.g. helpers, storage-mode
-> dashboards, integration setup) are **not** version-controlled by design.
+> dashboards, integration setup) are **not** version-controlled by design — `.storage`
+> also holds auth tokens, login credentials, integration API keys and the device/entity
+> registries, so committing it would leak secrets and corrupt other instances.
+
+## 5a. Making dashboards versionable (for AI-driven editing)
+
+By default Home Assistant keeps **dashboards in "storage mode"** (in `.storage`), so they
+can't be committed or edited as files. To version them — and let an AI build/edit them via
+files that HA-GitOps then deploys — switch the dashboard(s) to **YAML mode**:
+
+- **A whole dashboard in YAML:** Settings → Dashboards → open a dashboard → ⋮ → **Edit in
+  YAML** won't persist to a file by itself. Instead add a YAML-mode dashboard in
+  `configuration.yaml`:
+  ```yaml
+  lovelace:
+    mode: yaml          # the default/overview dashboard now reads ui-lovelace.yaml
+    dashboards:
+      laundry:
+        mode: yaml
+        title: Laundry
+        filename: dashboards/laundry.yaml
+        show_in_sidebar: true
+  ```
+  Create `ui-lovelace.yaml` (and `dashboards/laundry.yaml`) — these are plain YAML the AI
+  can write. HA-GitOps versions and deploys them; a Core restart (or a Lovelace reload)
+  applies them.
+- **Automations / scripts / scenes** are *already* YAML (`automations.yaml`, `scripts.yaml`,
+  `scenes.yaml`) even when created in the UI, so they're versioned and AI-editable as-is.
+- **Not versionable as files:** UI-created helpers, integration/config entries, devices,
+  areas and users live in `.storage` and stay instance-local. (Many helpers *can* be
+  declared in YAML via `input_*:` / `template:` if you want them versioned.)
+
+The Readiness page flags when dashboards are still in storage mode.
 
 ## 6. Known limitations
 

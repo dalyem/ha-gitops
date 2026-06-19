@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4
+
+- Readiness now detects when Lovelace dashboards are in UI/"storage" mode (in
+  `.storage`, so not versionable) and recommends switching to YAML mode, which
+  makes dashboards editable files an AI can build and HA-GitOps can deploy.
+- DOCS: added "Making dashboards versionable" with the YAML-mode setup, and
+  clarified why `.storage` must never be committed (it holds auth tokens,
+  credentials, integration API keys and the registries).
+
 ## 0.1.3
 
 - Fix: Initialize/push no longer try to commit rotated logs (`home-assistant.log.1`

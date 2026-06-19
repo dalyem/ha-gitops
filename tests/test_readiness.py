@@ -83,3 +83,16 @@ def test_conf_files_are_not_flagged_as_tokens():
 def test_rotated_logs_are_flagged():
     report = readiness.analyze(CLEAN + ["home-assistant.log.1"], GOOD_GITIGNORE, is_empty=False)
     assert "logs_committed" in codes(report)
+
+
+def test_storage_dashboards_recommendation():
+    # storage-mode dashboards on the instance + none in YAML -> nudge
+    r = readiness.analyze(CLEAN, GOOD_GITIGNORE, is_empty=False, storage_dashboards=True)
+    assert "dashboards_in_storage" in codes(r)
+    # a YAML dashboard present -> no nudge
+    r2 = readiness.analyze(CLEAN + ["ui-lovelace.yaml"], GOOD_GITIGNORE,
+                           is_empty=False, storage_dashboards=True)
+    assert "dashboards_in_storage" not in codes(r2)
+    # no storage dashboards -> no nudge
+    r3 = readiness.analyze(CLEAN, GOOD_GITIGNORE, is_empty=False, storage_dashboards=False)
+    assert "dashboards_in_storage" not in codes(r3)

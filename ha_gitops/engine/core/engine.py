@@ -150,12 +150,24 @@ class Engine:
             return await self._run_readiness_locked()
 
     # ---- readiness ----------------------------------------------------------
+    @staticmethod
+    def _has_storage_dashboards() -> bool:
+        """True if the live instance has UI/storage-mode Lovelace dashboards."""
+        storage = settings.HA_CONFIG_DIR / ".storage"
+        try:
+            return storage.is_dir() and any(storage.glob("lovelace*"))
+        except OSError:
+            return False
+
     async def readiness_for(self, sha: str) -> tuple[ReadinessReport, dict[str, str]]:
         conn = self.require_connection()
         tracked = await self.git.ls_tree(sha, conn.config_path)
         gi_bytes = await self.git.show_bytes(sha, _join(conn.config_path, ".gitignore"))
         gi_text = gi_bytes.decode("utf-8", "replace") if gi_bytes else None
-        report = readiness.analyze(list(tracked.keys()), gi_text, is_empty=False)
+        report = readiness.analyze(
+            list(tracked.keys()), gi_text, is_empty=False,
+            storage_dashboards=self._has_storage_dashboards(),
+        )
         return report, tracked
 
     async def _run_readiness_locked(self) -> ReadinessReport:

@@ -101,6 +101,7 @@ def analyze(
     tracked_paths: list[str],
     gitignore_text: str | None,
     is_empty: bool,
+    storage_dashboards: bool = False,
 ) -> ReadinessReport:
     findings: list[Finding] = []
 
@@ -211,6 +212,28 @@ def analyze(
                 suggestion="Add a README.md.",
             )
         )
+
+    # Dashboards live in .storage (UI/"storage" mode) by default, which can't be
+    # safely versioned. Nudge the user toward YAML mode so dashboards become
+    # editable files an AI can build and HA-GitOps can deploy.
+    if storage_dashboards:
+        has_yaml_dash = any(
+            p == "ui-lovelace.yaml" or p.startswith(("lovelace/", "dashboards/"))
+            for p in paths
+        )
+        if not has_yaml_dash:
+            findings.append(
+                Finding(
+                    code="dashboards_in_storage",
+                    severity=Severity.RECOMMENDATION,
+                    title="Dashboards are in UI (storage) mode — not versioned",
+                    detail="Lovelace dashboards are stored in .storage as JSON, not "
+                    "YAML, so they aren't committed and an AI can't edit them as files.",
+                    suggestion="Switch dashboards to YAML mode to version them (see DOCS "
+                    "→ “Making dashboards versionable”). Automations/scripts/scenes are "
+                    "already YAML and are versioned.",
+                )
+            )
 
     score = 100
     for f in findings:
