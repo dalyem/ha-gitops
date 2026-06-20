@@ -111,3 +111,32 @@ The Readiness page flags when dashboards are still in storage mode.
 - No inbound ports — polling only (NAT-friendly).
 - Web UI is reachable only through authenticated Home Assistant Ingress.
 - Tokens are redacted from logs, diffs, notifications and issues.
+
+## 8. Recovery — what the repo is (and isn't) a backup of
+
+HA-GitOps versions your **editable YAML configuration**, not your whole instance. The
+repo alone **cannot** restore a lost instance, because it deliberately excludes
+`.storage`, the database and `secrets.yaml`.
+
+- **In the repo:** `configuration.yaml`, `automations/scripts/scenes.yaml`, `themes/`,
+  `packages/`, `blueprints/`, YAML-mode dashboards, `www/`.
+- **NOT in the repo (lives in `.storage` / DB / secrets):** your integrations and their
+  settings (config entries), devices, areas, entity customisations, UI-created helpers,
+  storage-mode dashboards, users & auth tokens, and all history — plus `secrets.yaml`.
+
+**To recover a lost instance, restore a Home Assistant *full backup*, not this repo.** A
+full backup contains `.storage`, the database, secrets and your add-ons. Keep full backups
+**off the instance** (e.g. the Google Drive Backup or Samba Backup add-on) — the partial
+backups HA-GitOps takes before each deploy live *on* the instance and only help you roll
+back a bad deploy, not recover lost hardware. After restoring (or on a fresh HA), reinstall
+HA-GitOps, reconnect the repo, and **Deploy Now** to bring the YAML layer back.
+
+**If all you have is the git repo:** you can rebuild the config *files*, but you'll still
+re-add every integration, re-create storage-mode dashboards/helpers, re-enter
+`secrets.yaml` (use the generated `secrets.yaml.example`), and re-pair devices — that state
+lives in `.storage`. Also make sure referenced dirs like `themes/` exist (keep a
+`themes/.gitkeep`) and `secrets.yaml` is present, or validation will block the deploy.
+
+**What HA-GitOps *does* protect you from:** bad commits / config mistakes — it validates
+before deploying, never restarts on invalid config, reverts a failed apply, takes a
+pre-deploy backup, and keeps a deployment history you can redeploy from.
