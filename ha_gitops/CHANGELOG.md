@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+- New: one-click **dashboard converter** (Readiness page). Converts your UI
+  (storage-mode) Lovelace dashboards to YAML mode automatically — reads `.storage`
+  **read-only** (your dashboards stay intact and it's reversible), writes
+  `ui-lovelace.yaml` + `dashboards/*.yaml`, pulls in your custom-card resources,
+  and appends a `lovelace: mode: yaml` block to `configuration.yaml` (append-only,
+  with a pre-convert backup). Then review on Changes → Push → restart HA.
+
 ## 0.1.6
 
 - Fix: deploy no longer fails validation when the config references an empty or

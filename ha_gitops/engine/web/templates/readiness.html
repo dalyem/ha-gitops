@@ -23,6 +23,24 @@
     </div>
   </div>
 
+  {% set storage_dash = report.findings | selectattr('code', 'equalto', 'dashboards_in_storage') | list %}
+  {% if storage_dash %}
+  <div class="card">
+    <h2>🎛️ Dashboard converter</h2>
+    <p class="muted">Convert your UI (storage-mode) dashboards into versionable YAML files —
+      including your custom-card resources. Your dashboards are read <strong>read-only</strong>
+      from <code>.storage</code> and left intact, so this is fully reversible.</p>
+    <div class="actions">
+      <button class="btn primary" data-post="/api/dashboards/convert" data-busy="Converting…"
+        data-confirm="Read your UI dashboards from .storage and write them as YAML files, and append a 'lovelace: mode: yaml' block to configuration.yaml? A backup is taken first and your .storage dashboards are NOT modified (reversible). Afterwards: review on Changes, Push, then restart Home Assistant to activate.">
+        Convert dashboards to YAML
+      </button>
+    </div>
+    <p class="muted" style="margin-top:10px">After it runs: <strong>Changes</strong> → review &amp;
+      <strong>Push</strong>, then restart Home Assistant to switch to YAML mode.</p>
+  </div>
+  {% endif %}
+
   {% for sev in ['blocker', 'warning', 'recommendation'] %}
     {% set items = report.findings | selectattr('severity', 'equalto', sev) | list %}
     {% if items %}

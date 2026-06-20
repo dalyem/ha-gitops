@@ -231,9 +231,10 @@ def analyze(
                     title="Dashboards are in UI (storage) mode — not versioned",
                     detail="Lovelace dashboards are stored in .storage as JSON, not "
                     "YAML, so they aren't committed and an AI can't edit them as files.",
-                    suggestion="Switch dashboards to YAML mode to version them (see DOCS "
-                    "→ “Making dashboards versionable”). Automations/scripts/scenes are "
-                    "already YAML and are versioned.",
+                    suggestion="Use the “Convert dashboards to YAML” button below to do "
+                    "this automatically (reversible; reads .storage read-only), or see "
+                    "DOCS → “Making dashboards versionable”. Automations/scripts/scenes "
+                    "are already YAML and versioned.",
                 )
             )
 

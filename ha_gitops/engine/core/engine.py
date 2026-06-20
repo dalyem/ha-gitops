@@ -243,6 +243,41 @@ class Engine:
         async with self._operation("Initializing repository"):
             return await self.sync.initialize()
 
+    async def preview_dashboard_conversion(self) -> dict:
+        from . import lovelace
+        conv = await asyncio.to_thread(lovelace.build, settings.HA_CONFIG_DIR)
+        return conv.to_dict()
+
+    async def convert_dashboards(self) -> dict:
+        async with self._operation("Converting dashboards"):
+            from . import lovelace
+            conv = await asyncio.to_thread(lovelace.build, settings.HA_CONFIG_DIR)
+            if conv.empty:
+                return {
+                    "converted": 0, "files": [], "warnings": conv.warnings,
+                    "message": "No storage-mode dashboards found to convert.",
+                }
+            backup = None
+            if self.options.backup_before_deploy and self.supervisor.available:
+                try:
+                    backup = await self.supervisor.create_partial_backup(
+                        "HA-GitOps pre-dashboard-convert"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    self.state.log_event("warning", "convert", f"pre-convert backup failed: {exc}")
+            written = await asyncio.to_thread(lovelace.apply, conv, settings.HA_CONFIG_DIR)
+            n = len(conv.dashboards) + (1 if conv.has_default else 0)
+            msg = (
+                f"Converted {n} dashboard(s) to YAML ({len(written)} file(s)). "
+                "Review on Changes → Push, then restart Home Assistant to activate YAML mode."
+            )
+            self.state.log_event("info", "convert", msg)
+            return {
+                "converted": n, "files": written, "dashboards": conv.dashboards,
+                "resources": conv.resources, "warnings": conv.warnings,
+                "backup_slug": backup, "message": msg,
+            }
+
     # ---- status -------------------------------------------------------------
     async def versions(self) -> dict:
         if self._versions is None and self.supervisor.available:

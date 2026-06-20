@@ -131,6 +131,22 @@ async def initialize(request: Request):
         raise _fail(exc) from exc
 
 
+@router.get("/dashboards/preview")
+async def dashboards_preview(request: Request):
+    try:
+        return await get_engine(request).preview_dashboard_conversion()
+    except Exception as exc:  # noqa: BLE001
+        raise _fail(exc) from exc
+
+
+@router.post("/dashboards/convert")
+async def dashboards_convert(request: Request):
+    try:
+        return await get_engine(request).convert_dashboards()
+    except Exception as exc:  # noqa: BLE001
+        raise _fail(exc) from exc
+
+
 @router.post("/deploy")
 async def deploy(request: Request, body: DeployIn | None = None):
     try:

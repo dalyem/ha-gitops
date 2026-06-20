@@ -71,7 +71,13 @@ add-on actively refuses to commit them.
 
 By default Home Assistant keeps **dashboards in "storage mode"** (in `.storage`), so they
 can't be committed or edited as files. To version them — and let an AI build/edit them via
-files that HA-GitOps then deploys — switch the dashboard(s) to **YAML mode**:
+files that HA-GitOps then deploys — switch the dashboard(s) to **YAML mode**.
+
+> **Easiest:** the **Readiness** page has a **“Convert dashboards to YAML”** button that
+> does all of this for you — it reads `.storage` read-only (your dashboards stay intact and
+> it's reversible), writes `ui-lovelace.yaml` + `dashboards/*.yaml`, carries over your
+> custom-card resources, and appends the `lovelace:` block below. Then review on **Changes**,
+> **Push**, and restart Home Assistant. The manual steps follow if you'd rather do it yourself:
 
 - **A whole dashboard in YAML:** Settings → Dashboards → open a dashboard → ⋮ → **Edit in
   YAML** won't persist to a file by itself. Instead add a YAML-mode dashboard in
