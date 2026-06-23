@@ -31,6 +31,14 @@ def test_options_loaded_from_file(tmp_path, monkeypatch):
     assert opts.auto_deploy is False
 
 
+def test_auto_push_defaults(tmp_path, monkeypatch):
+    monkeypatch.setattr("engine.settings.OPTIONS_FILE", tmp_path / "nope.json")
+    opts = Options.load()
+    assert opts.auto_push is False                 # opt-in, off by default
+    assert opts.auto_push_delay == "15m"
+    assert opts.auto_push_delay_seconds == 900
+
+
 def test_options_ignores_type_corrupt_values(tmp_path, monkeypatch):
     f = tmp_path / "options.json"
     f.write_text('{"check_interval": 5, "auto_deploy": "yes", "backup_before_deploy": false}')

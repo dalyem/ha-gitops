@@ -54,6 +54,8 @@
         Poll GitHub every {{ status.interval_seconds }}s
       </label>
       <p class="muted">Auto-deploy on new commits: <strong>{{ 'on' if status.auto_deploy else 'off' }}</strong></p>
+      <p class="muted">Auto-push local changes:
+        <strong>{{ ('on (after ' ~ status.options.auto_push_delay ~ ' idle)') if status.options.auto_push else 'off' }}</strong></p>
       {% if status.readiness %}
         <h2 style="margin-top:16px">Readiness</h2>
         <p>Score <strong>{{ status.readiness.score }}</strong>/100 —

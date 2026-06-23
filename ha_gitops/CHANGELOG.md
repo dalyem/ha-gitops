@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- New: opt-in **auto-push** of local changes (HA → GitHub). Off by default. When
+  on, the poll loop commits & pushes local edits only after they've been **stable
+  for `auto_push_delay` (default 15m)** — any further edit resets the timer, so
+  in-progress work is never pushed mid-edit. It validates first, skips on
+  conflict, and backs off on failure. New options: `auto_push`, `auto_push_delay`.
+
 ## 0.2.0
 
 - New: one-click **dashboard converter** (Readiness page). Converts your UI

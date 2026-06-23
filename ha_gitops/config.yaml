@@ -1,7 +1,7 @@
 ---
 name: HA-GitOps
 slug: ha_gitops
-version: "0.2.0"
+version: "0.3.0"
 description: >-
   GitOps-style, validation-gated configuration sync between a GitHub
   repository and Home Assistant. A bad commit can never take HA down.
@@ -30,6 +30,8 @@ options:
   log_level: info
   check_interval: 5m
   auto_deploy: true
+  auto_push: false
+  auto_push_delay: 15m
   notify_on_success: false
   notify_on_failure: true
   notify_service: ""
@@ -39,6 +41,8 @@ schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)?
   check_interval: str
   auto_deploy: bool
+  auto_push: bool
+  auto_push_delay: str
   notify_on_success: bool
   notify_on_failure: bool
   notify_service: str?

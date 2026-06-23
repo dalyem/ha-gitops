@@ -11,6 +11,8 @@ DEFAULTS: dict = {
     "log_level": "info",
     "check_interval": "5m",
     "auto_deploy": True,
+    "auto_push": False,
+    "auto_push_delay": "15m",
     "notify_on_success": False,
     "notify_on_failure": True,
     "notify_service": "",
@@ -43,6 +45,8 @@ class Options:
     log_level: str = "info"
     check_interval: str = "5m"
     auto_deploy: bool = True
+    auto_push: bool = False
+    auto_push_delay: str = "15m"
     notify_on_success: bool = False
     notify_on_failure: bool = True
     notify_service: str = ""
@@ -52,6 +56,10 @@ class Options:
     @property
     def interval_seconds(self) -> int:
         return parse_interval(self.check_interval)
+
+    @property
+    def auto_push_delay_seconds(self) -> int:
+        return parse_interval(self.auto_push_delay, default=900)
 
     @classmethod
     def load(cls) -> Options:
@@ -75,6 +83,9 @@ class Options:
             "check_interval": self.check_interval,
             "interval_seconds": self.interval_seconds,
             "auto_deploy": self.auto_deploy,
+            "auto_push": self.auto_push,
+            "auto_push_delay": self.auto_push_delay,
+            "auto_push_delay_seconds": self.auto_push_delay_seconds,
             "notify_on_success": self.notify_on_success,
             "notify_on_failure": self.notify_on_failure,
             "notify_service": self.notify_service,

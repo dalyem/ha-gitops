@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from ..models import DeployStatus, SyncState
@@ -17,6 +18,27 @@ if TYPE_CHECKING:
     from .engine import Engine
 
 log = logging.getLogger("ha_gitops.scheduler")
+
+
+def _autopush_decision(
+    sig: str, stored_sig: str | None, since_iso: str | None, now_iso: str, delay_seconds: int
+) -> tuple[bool, str, str]:
+    """Debounce decision: returns (push_now, sig_to_store, since_to_store).
+
+    Any change to the local-change signature restarts the quiet-period timer; we
+    only push once the signature has been unchanged for ``delay_seconds``.
+    """
+    if sig != stored_sig:
+        return False, sig, now_iso  # changes (re)started -> reset timer
+    if not since_iso:
+        return False, sig, now_iso
+    try:
+        elapsed = (datetime.fromisoformat(now_iso) - datetime.fromisoformat(since_iso)).total_seconds()
+    except ValueError:
+        return False, sig, now_iso
+    if elapsed >= delay_seconds:
+        return True, sig, since_iso
+    return False, sig, since_iso
 
 
 class Scheduler:
@@ -96,9 +118,47 @@ class Scheduler:
                 log.info("skipping auto-deploy: %s", exc)
             return
 
-        if state is SyncState.LOCAL_CHANGES and prev != SyncState.LOCAL_CHANGES.value:
-            await e.notifier._persistent(
-                "HA-GitOps: local changes detected",
-                f"{changes.count} file(s) differ from GitHub. Review and push from the GitOps panel.",
-                "ha_gitops_local",
-            )
+        if state is SyncState.LOCAL_CHANGES:
+            if prev != SyncState.LOCAL_CHANGES.value:
+                await e.notifier._persistent(
+                    "HA-GitOps: local changes detected",
+                    f"{changes.count} file(s) differ from GitHub. Review and push from the GitOps panel.",
+                    "ha_gitops_local",
+                )
+            if e.options.auto_push:
+                await self._maybe_auto_push(changes)
+            return
+
+        # No pending local changes -> drop any debounce timer.
+        e.state.set("autopush_sig", None)
+        e.state.set("autopush_since", None)
+
+    async def _maybe_auto_push(self, changes) -> None:
+        e = self.e
+        sig = await asyncio.to_thread(e.local_change_signature, changes)
+        if not sig:
+            e.state.set("autopush_sig", None)
+            e.state.set("autopush_since", None)
+            return
+        now = utcnow()
+        push, new_sig, new_since = _autopush_decision(
+            sig, e.state.get("autopush_sig"), e.state.get("autopush_since"),
+            now, e.options.auto_push_delay_seconds,
+        )
+        e.state.set("autopush_sig", new_sig)
+        e.state.set("autopush_since", new_since)
+        if not push:
+            return
+        try:
+            result = await e.push_local("Auto-sync: Home Assistant local configuration changes")
+        except RuntimeError as exc:  # engine busy with a manual op
+            log.info("auto-push deferred: %s", exc)
+            return
+        if result.status is DeployStatus.SUCCESS:
+            e.state.set("autopush_sig", None)
+            e.state.set("autopush_since", None)
+            log.info("auto-pushed local changes (%s)", (result.sha or "")[:8])
+        else:
+            # Don't retry every tick — restart the quiet period.
+            e.state.set("autopush_since", now)
+            log.info("auto-push not completed (%s); backing off", result.status.value)

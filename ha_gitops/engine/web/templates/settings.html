@@ -9,6 +9,7 @@
   <dl class="kv">
     <dt>Check interval</dt><dd>{{ options.check_interval }} ({{ options.interval_seconds }}s)</dd>
     <dt>Auto-deploy</dt><dd>{{ options.auto_deploy }}</dd>
+    <dt>Auto-push local changes</dt><dd>{{ options.auto_push }}{% if options.auto_push %} (after {{ options.auto_push_delay }} idle){% endif %}</dd>
     <dt>Notify on success</dt><dd>{{ options.notify_on_success }}</dd>
     <dt>Notify on failure</dt><dd>{{ options.notify_on_failure }}</dd>
     <dt>Notify service</dt><dd>{{ options.notify_service or '—' }}</dd>

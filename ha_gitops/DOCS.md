@@ -35,6 +35,8 @@ Open the add-on's **Web UI** (Ingress) and:
 | `log_level` | `info` | Engine log verbosity. |
 | `check_interval` | `5m` | Poll cadence: `1m`, `5m`, `15m`, `30m`, `1h`, or custom (`90s`, `10m`, `2h`). |
 | `auto_deploy` | `true` | Auto-deploy new commits when there is **no** conflict/local drift. |
+| `auto_push` | `false` | Auto-commit & push local changes back to GitHub once they've been idle for `auto_push_delay`. Opt-in; skipped on conflict; validated first. |
+| `auto_push_delay` | `15m` | Quiet period local changes must be stable before auto-push commits them. Any further edit resets the timer. |
 | `notify_on_success` | `false` | Persistent/mobile notification on successful deploy. |
 | `notify_on_failure` | `true` | Notify on validation/deploy failure. |
 | `notify_service` | `""` | A `notify.*` service for mobile push, e.g. `notify.mobile_app_pixel`. |

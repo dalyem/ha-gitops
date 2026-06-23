@@ -203,6 +203,26 @@ class Engine:
             filesync.detect_local_changes, manifest, settings.HA_CONFIG_DIR, gi_text
         )
 
+    @staticmethod
+    def local_change_signature(changes: LocalChanges) -> str:
+        """Stable hash of the current local-change set + content (drives auto-push debounce)."""
+        import hashlib
+
+        from . import filesync
+
+        parts: list[str] = []
+        for rel in sorted(changes.modified + changes.added):
+            p = settings.HA_CONFIG_DIR / rel
+            if p.is_file():
+                try:
+                    parts.append(f"{rel}:{filesync.sha256_file(p)}")
+                except OSError:
+                    parts.append(f"{rel}:?")
+        parts.extend(f"DEL:{rel}" for rel in sorted(changes.deleted))
+        if not parts:
+            return ""
+        return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+
     async def compute_sync_state(self) -> tuple[SyncState, LocalChanges]:
         if not self.connected:
             return SyncState.NOT_CONNECTED, LocalChanges()
